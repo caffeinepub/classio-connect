@@ -1,32 +1,28 @@
-# Classio Connect - Adaptive Learning Platform
+# Classio Connect
 
 ## Current State
-New project. No existing application files.
+Single LoginPage at `/` with 3 role tabs (Student/Teacher/Admin) in one card. Login errors shown only via toast notifications. Routes: `/admin`, `/teacher`, `/student` for dashboards.
 
 ## Requested Changes (Diff)
 
 ### Add
-- Login page with Classio logo (dark theme matching brand)
-- Three distinct dashboards: Admin, Teacher, Student
-- Admin dashboard: create and manage teachers (name, email, password)
-- Teacher dashboard: create student IDs (school name, student name, mobile number - all mandatory), view their students
-- Student dashboard: adaptive English learning platform with lesson/module progress tracking; resumes from last position on re-login
-- Student login via: school name + student name + mobile number (no password needed - credentials are their identity)
-- Role-based routing: after login, redirect to correct dashboard based on role
-- Progress persistence: student's current lesson/module stored in backend; restored on re-login
-- Adaptive learning modules: vocabulary, grammar, speaking practice, listening - with levels that adjust based on performance
-- AI agent character (mascot) on student dashboard for interactive practice
+- `StudentLoginPage` at `/login/student` — 2-tile split-screen layout (left: branded panel with logo/tagline/visuals, right: login form with inline error messages)
+- `TeacherLoginPage` at `/login/teacher` — same 2-tile split-screen layout
+- `AdminLoginPage` at `/login/admin` — same 2-tile split-screen layout
+- Role selection landing page at `/` — a professional portal selector with 3 cards (Student, Teacher, Admin) that routes to respective login pages
+- Inline error display below each field (red error text) in addition to/instead of only toast on wrong credentials
 
 ### Modify
-- Nothing (new project)
+- `App.tsx` — add routes for `/login/student`, `/login/teacher`, `/login/admin`; keep `/` as the role selection page; keep dashboard routes
+- Login error handling — show inline error messages (e.g., "Invalid credentials" under the form) with a red alert box, not just toast
 
 ### Remove
-- Nothing
+- Old single `LoginPage` with tabs (replace entirely)
 
 ## Implementation Plan
-1. Backend: roles (admin/teacher/student), teacher CRUD by admin, student CRUD by teacher with school/name/mobile, student progress tracking per module, session resume
-2. Frontend login: role selector + credentials form, Classio logo prominent
-3. Admin dashboard: teacher management table, add teacher form
-4. Teacher dashboard: student management, create student form with school name/student name/mobile
-5. Student dashboard: learning modules grid, progress bars, resume indicator, AI mascot character
-6. Progress persistence: on each lesson completion or navigation, save position to backend
+1. Create `RoleSelectPage.tsx` at `/` — 3 large clickable cards for Student / Teacher / Admin, each linking to the respective login page
+2. Create `StudentLoginPage.tsx` — 2-tile: left tile branded with logo + motivational tagline + decorative element; right tile has School Name, Student Name, Mobile Number fields with inline validation errors
+3. Create `TeacherLoginPage.tsx` — 2-tile: left branded; right tile has Teacher ID + Email with inline errors
+4. Create `AdminLoginPage.tsx` — 2-tile: left branded; right tile has Email + Password with inline errors
+5. Update `App.tsx` — register all 4 new routes, remove old LoginPage import
+6. Each login page: on wrong credentials show a red alert box inside the form (not just toast), mobile-responsive (stack tiles vertically on small screens)

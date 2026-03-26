@@ -10,14 +10,16 @@ import { Footer } from "./components/Footer";
 import { Navbar } from "./components/Navbar";
 import { AITutorPage } from "./pages/AITutorPage";
 import { AdminDashboard } from "./pages/AdminDashboard";
+import { AdminLoginPage } from "./pages/AdminLoginPage";
 import { CoursesPage } from "./pages/CoursesPage";
 import { LessonPage } from "./pages/LessonPage";
-import { LoginPage } from "./pages/LoginPage";
 import { ProfilePage } from "./pages/ProfilePage";
+import { RoleSelectPage } from "./pages/RoleSelectPage";
 import { StudentDashboard } from "./pages/StudentDashboard";
+import { StudentLoginPage } from "./pages/StudentLoginPage";
 import { TeacherDashboard } from "./pages/TeacherDashboard";
+import { TeacherLoginPage } from "./pages/TeacherLoginPage";
 
-// Root for the new multi-role dashboards (no navbar/footer)
 const rootRoute = createRootRoute({
   component: () => (
     <div className="min-h-screen bg-background">
@@ -27,7 +29,6 @@ const rootRoute = createRootRoute({
   ),
 });
 
-// Old layout route with Navbar/Footer (for legacy pages)
 const layoutRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: "layout",
@@ -42,10 +43,28 @@ const layoutRoute = createRoute({
   ),
 });
 
-const loginRoute = createRoute({
+const roleSelectRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
-  component: LoginPage,
+  component: RoleSelectPage,
+});
+
+const studentLoginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/login/student",
+  component: StudentLoginPage,
+});
+
+const teacherLoginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/login/teacher",
+  component: TeacherLoginPage,
+});
+
+const adminLoginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/login/admin",
+  component: AdminLoginPage,
 });
 
 const adminRoute = createRoute({
@@ -91,7 +110,10 @@ const profileRoute = createRoute({
 });
 
 const routeTree = rootRoute.addChildren([
-  loginRoute,
+  roleSelectRoute,
+  studentLoginRoute,
+  teacherLoginRoute,
+  adminLoginRoute,
   adminRoute,
   teacherRoute,
   studentRoute,
