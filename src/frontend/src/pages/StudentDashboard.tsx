@@ -69,7 +69,7 @@ const MODULES: Module[] = [
     name: "Vocabulary Builder",
     icon: "📚",
     description: "Expand your word bank with 500+ essential English words",
-    totalLessons: 3,
+    totalLessons: 10,
     level: "Beginner",
   },
   {
@@ -168,45 +168,44 @@ export function StudentDashboard() {
     const storedStudent = localStorage.getItem("classio_student");
     if (storedStudent) {
       try {
-        setStudent(JSON.parse(storedStudent));
+        const s = JSON.parse(storedStudent);
+        setStudent(s);
+        const sid = String(s.id);
+
+        // Per-student progress
+        const storedProgress = localStorage.getItem(
+          `classio_student_progress_${sid}`,
+        );
+        if (storedProgress) {
+          try {
+            setSavedProgress(JSON.parse(storedProgress));
+          } catch {}
+        }
+
+        const mp: Record<string, number> = {};
+        for (const m of MODULES) {
+          const val = localStorage.getItem(`classio_mod_${sid}_${m.name}`);
+          if (val) mp[m.name] = Number(val);
+        }
+        setModuleProgress(mp);
+
+        const g = localStorage.getItem(`classio_grade_${sid}`);
+        if (g) setAssignedGrade(Number(g));
+
+        // Load reports
+        const savedReports = localStorage.getItem(`classio_reports_${sid}`);
+        if (savedReports) {
+          try {
+            setReports(JSON.parse(savedReports));
+          } catch {}
+        }
       } catch {
         navigate({ to: "/" });
       }
-    }
-    const storedProgress = localStorage.getItem("classio_student_progress");
-    if (storedProgress) {
-      try {
-        setSavedProgress(JSON.parse(storedProgress));
-      } catch {}
-    }
-    const mp: Record<string, number> = {};
-    for (const m of MODULES) {
-      const val = localStorage.getItem(`classio_mod_${m.name}`);
-      if (val) mp[m.name] = Number(val);
-    }
-    setModuleProgress(mp);
-
-    // Load assigned grade
-    const storedStudent2 = localStorage.getItem("classio_student");
-    if (storedStudent2) {
-      try {
-        const s2 = JSON.parse(storedStudent2);
-        const g = localStorage.getItem(`classio_grade_${s2.id}`);
-        if (g) setAssignedGrade(Number(g));
-      } catch {}
+    } else {
+      navigate({ to: "/" });
     }
   }, [navigate]);
-
-  useEffect(() => {
-    const storedStudent = localStorage.getItem("classio_student");
-    if (!storedStudent) return;
-    try {
-      const s = JSON.parse(storedStudent);
-      const key = `classio_reports_${s.id}`;
-      const saved = localStorage.getItem(key);
-      if (saved) setReports(JSON.parse(saved));
-    } catch {}
-  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("classio_role");
@@ -216,20 +215,38 @@ export function StudentDashboard() {
 
   const openModule = (module: Module) => {
     const currentLesson = moduleProgress[module.name] ?? 0;
-    const base = currentLesson >= module.totalLessons ? 1 : currentLesson + 1;
-    const lesson = Math.max(base, assignedGrade ?? 1);
-    const clampedLesson = Math.min(lesson, module.totalLessons);
+    // If no progress yet for this student, start at their assigned grade level
+    const grade = assignedGrade ?? 1;
+    const base =
+      currentLesson > 0
+        ? currentLesson >= module.totalLessons
+          ? 1
+          : currentLesson + 1
+        : grade;
+    const clampedLesson = Math.min(Math.max(base, 1), module.totalLessons);
     setActiveModuleLesson({ module, lesson: clampedLesson });
   };
 
   const handleModuleComplete = async (score: number, total: number) => {
-    if (!activeModuleLesson || !student) return;
+    if (!activeModuleLesson) return;
     const { module, lesson } = activeModuleLesson;
     const percent = total > 0 ? Math.round((score / total) * 100) : 0;
     const remark = generateRemark(module.name, percent);
 
-    // Save to backend
-    if (actor) {
+    // Get student id from state or localStorage fallback
+    const sid = student
+      ? String(student.id)
+      : (() => {
+          try {
+            const s = localStorage.getItem("classio_student");
+            return s ? String(JSON.parse(s).id) : "";
+          } catch {
+            return "";
+          }
+        })();
+
+    // Save to backend (only if student loaded)
+    if (student && actor) {
       (actor as any)
         .saveActivityReport(
           BigInt(String(student.id)),
@@ -241,28 +258,29 @@ export function StudentDashboard() {
         .catch(() => {});
     }
 
-    // Save to localStorage
-    const newReport: LocalReport = {
-      moduleName: module.name,
-      score: percent,
-      total,
-      percent,
-      remark,
-      completedAt: new Date().toLocaleDateString(),
-    };
-    const key = `classio_reports_${String(student.id)}`;
-    const existing = localStorage.getItem(key);
-    let existing_reports: LocalReport[] = [];
-    try {
-      existing_reports = existing ? JSON.parse(existing) : [];
-    } catch {}
-    // Replace existing report for same module
-    const filtered = existing_reports.filter(
-      (r) => r.moduleName !== module.name,
-    );
-    const updated = [...filtered, newReport];
-    localStorage.setItem(key, JSON.stringify(updated));
-    setReports(updated);
+    // Save to localStorage (always runs)
+    if (sid) {
+      const newReport: LocalReport = {
+        moduleName: module.name,
+        score: percent,
+        total,
+        percent,
+        remark,
+        completedAt: new Date().toLocaleDateString(),
+      };
+      const key = `classio_reports_${sid}`;
+      const existing = localStorage.getItem(key);
+      let existing_reports: LocalReport[] = [];
+      try {
+        existing_reports = existing ? JSON.parse(existing) : [];
+      } catch {}
+      const filtered = existing_reports.filter(
+        (r) => r.moduleName !== module.name,
+      );
+      const updated = [...filtered, newReport];
+      localStorage.setItem(key, JSON.stringify(updated));
+      setReports(updated);
+    }
 
     // Adaptive lesson advancement based on performance
     let nextLesson: number;
@@ -281,21 +299,28 @@ export function StudentDashboard() {
       nextLesson = Math.min(lesson, module.totalLessons);
       toast.success(`${module.name} completed! Score: ${percent}% 🎉`);
     }
+
     const newProgress = { ...moduleProgress, [module.name]: nextLesson };
     setModuleProgress(newProgress);
-    localStorage.setItem(`classio_mod_${module.name}`, String(nextLesson));
 
-    const progressData: StudentProgress = {
-      currentModule: module.name,
-      currentLesson: nextLesson,
-    };
-    setSavedProgress(progressData);
-    localStorage.setItem(
-      "classio_student_progress",
-      JSON.stringify(progressData),
-    );
+    if (sid) {
+      localStorage.setItem(
+        `classio_mod_${sid}_${module.name}`,
+        String(nextLesson),
+      );
 
-    if (actor) {
+      const progressData: StudentProgress = {
+        currentModule: module.name,
+        currentLesson: nextLesson,
+      };
+      setSavedProgress(progressData);
+      localStorage.setItem(
+        `classio_student_progress_${sid}`,
+        JSON.stringify(progressData),
+      );
+    }
+
+    if (student && actor) {
       actor
         .updateStudentProgress(
           BigInt(String(student.id)),
@@ -443,6 +468,11 @@ export function StudentDashboard() {
               {student?.schoolName}
             </p>
           </div>
+          {assignedGrade && (
+            <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full font-semibold">
+              Grade {assignedGrade}
+            </span>
+          )}
           <button
             type="button"
             data-ocid="student.logout_button"
@@ -502,6 +532,7 @@ export function StudentDashboard() {
           <h1 className="text-2xl font-bold">Your Learning Path</h1>
           <p className="text-muted-foreground text-sm mt-1">
             Adaptive English course tailored for you
+            {assignedGrade ? ` · Grade ${assignedGrade} level` : ""}
           </p>
         </div>
 

@@ -43,7 +43,7 @@ type NavItem = "overview" | "teachers";
 
 export function AdminDashboard() {
   const navigate = useNavigate();
-  const { actor } = useActor();
+  const { actor, isFetching } = useActor();
   const [activeNav, setActiveNav] = useState<NavItem>("overview");
   const [teachers, setTeachers] = useState<TeacherRecord[]>([]);
   const [totalStudents, setTotalStudents] = useState(0);
@@ -79,7 +79,12 @@ export function AdminDashboard() {
       toast.error("Name and email are required");
       return;
     }
-    if (!actor) return;
+    if (!actor) {
+      toast.error(
+        "System is still loading. Please wait a moment and try again.",
+      );
+      return;
+    }
     setIsAdding(true);
     try {
       const id = await actor.createTeacher(
@@ -429,13 +434,17 @@ export function AdminDashboard() {
                     <Button
                       data-ocid="admin.add_teacher.submit_button"
                       type="submit"
-                      disabled={isAdding}
+                      disabled={isAdding || !actor}
                       className="w-full gradient-cyan text-primary-foreground"
                     >
-                      {isAdding ? (
+                      {(isFetching && !actor) || isAdding ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       ) : null}
-                      {isAdding ? "Creating..." : "Create Teacher"}
+                      {isFetching && !actor
+                        ? "Connecting..."
+                        : isAdding
+                          ? "Creating..."
+                          : "Create Teacher"}
                     </Button>
                   </form>
                 )}

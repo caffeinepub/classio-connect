@@ -101,6 +101,162 @@ const LESSON_WORDS: Record<number, WordEntry[]> = {
     },
     { word: "spicy", meaning: "having a strong, hot flavour", emoji: "🌶️" },
   ],
+  7: [
+    {
+      word: "independence",
+      meaning: "freedom from control of others",
+      emoji: "🗽",
+    },
+    {
+      word: "circumstances",
+      meaning: "the conditions that affect a situation",
+      emoji: "🔄",
+    },
+    {
+      word: "ambition",
+      meaning: "a strong desire to achieve something",
+      emoji: "🎯",
+    },
+    {
+      word: "consequence",
+      meaning: "a result or effect of an action",
+      emoji: "⚖️",
+    },
+    {
+      word: "evaluate",
+      meaning: "to judge the quality or importance of something",
+      emoji: "🔍",
+    },
+    {
+      word: "summarize",
+      meaning: "to give a brief account of the main points",
+      emoji: "📝",
+    },
+    {
+      word: "perspective",
+      meaning: "a particular way of thinking about something",
+      emoji: "🧐",
+    },
+    {
+      word: "contribute",
+      meaning: "to give or add something to help a cause",
+      emoji: "🤝",
+    },
+  ],
+  8: [
+    { word: "analyze", meaning: "to examine something in detail", emoji: "🔬" },
+    {
+      word: "hypothesis",
+      meaning: "a proposed explanation based on limited evidence",
+      emoji: "💡",
+    },
+    {
+      word: "considerable",
+      meaning: "large in size, amount, or extent",
+      emoji: "📊",
+    },
+    {
+      word: "distinguish",
+      meaning: "to recognize the difference between things",
+      emoji: "🔀",
+    },
+    { word: "elaborate", meaning: "to explain in more detail", emoji: "📖" },
+    { word: "significant", meaning: "important or meaningful", emoji: "⭐" },
+    {
+      word: "evidence",
+      meaning: "facts that prove something is true",
+      emoji: "🗂️",
+    },
+    {
+      word: "contradiction",
+      meaning: "a statement that goes against another",
+      emoji: "❌",
+    },
+  ],
+  9: [
+    {
+      word: "eloquent",
+      meaning: "fluent and persuasive in speaking or writing",
+      emoji: "🎙️",
+    },
+    {
+      word: "meticulous",
+      meaning: "showing great attention to detail",
+      emoji: "🔎",
+    },
+    {
+      word: "prejudice",
+      meaning: "an unfair opinion formed without knowing the facts",
+      emoji: "⚖️",
+    },
+    {
+      word: "inevitable",
+      meaning: "certain to happen and unable to be avoided",
+      emoji: "⏳",
+    },
+    {
+      word: "contemplate",
+      meaning: "to think deeply and carefully about something",
+      emoji: "🤔",
+    },
+    {
+      word: "metaphor",
+      meaning: "a figure of speech comparing two unlike things",
+      emoji: "🌉",
+    },
+    {
+      word: "inference",
+      meaning: "a conclusion reached from evidence and reasoning",
+      emoji: "🧩",
+    },
+    {
+      word: "persuade",
+      meaning: "to convince someone to do or believe something",
+      emoji: "🗣️",
+    },
+  ],
+  10: [
+    {
+      word: "sophisticated",
+      meaning: "having a refined understanding of complex issues",
+      emoji: "🎩",
+    },
+    {
+      word: "ambiguous",
+      meaning: "open to more than one interpretation",
+      emoji: "❓",
+    },
+    {
+      word: "rhetoric",
+      meaning: "the art of effective persuasive speaking or writing",
+      emoji: "📜",
+    },
+    {
+      word: "phenomenon",
+      meaning: "a remarkable or observable fact or event",
+      emoji: "🌟",
+    },
+    {
+      word: "introspective",
+      meaning: "examining one's own thoughts and feelings",
+      emoji: "🪞",
+    },
+    {
+      word: "paradox",
+      meaning: "a statement that seems contradictory but may be true",
+      emoji: "♾️",
+    },
+    {
+      word: "empirical",
+      meaning: "based on observation and experience rather than theory",
+      emoji: "🧪",
+    },
+    {
+      word: "articulate",
+      meaning: "able to express thoughts clearly and effectively",
+      emoji: "💬",
+    },
+  ],
 };
 
 function shuffle<T>(arr: T[]): T[] {
@@ -113,7 +269,9 @@ interface Props {
 }
 
 export function VocabularyModule({ lesson, onComplete }: Props) {
-  const words = LESSON_WORDS[lesson] ?? LESSON_WORDS[1];
+  // Clamp lesson to available keys (1–10); fallback to grade-appropriate closest
+  const clampedLesson = Math.min(Math.max(lesson, 1), 10);
+  const words = LESSON_WORDS[clampedLesson] ?? LESSON_WORDS[1];
   const matchWords = words.slice(0, 4);
 
   const [phase, setPhase] = useState<"flashcard" | "match">("flashcard");
@@ -216,6 +374,9 @@ export function VocabularyModule({ lesson, onComplete }: Props) {
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
               Word {cardIndex + 1} of {words.length}
+            </p>
+            <p className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-full">
+              Grade {clampedLesson} Vocabulary
             </p>
           </div>
           <AnimatePresence mode="wait">
