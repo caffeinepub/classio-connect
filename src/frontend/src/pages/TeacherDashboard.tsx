@@ -61,7 +61,7 @@ export function TeacherDashboard() {
   useEffect(() => {
     if (!actor || !teacherId) return;
     setIsLoadingData(true);
-    (actor as any)
+    actor
       .getStudentsByTeacher(BigInt(teacherId))
       .then((list: StudentRecord[]) => setStudents(list || []))
       .catch(() => toast.error("Failed to load students"))
@@ -81,7 +81,7 @@ export function TeacherDashboard() {
     if (!actor) return;
     setIsAdding(true);
     try {
-      const id = await (actor as any).createStudent(
+      const id = await actor.createStudent(
         sSchool.trim(),
         sName.trim(),
         sMobile.trim(),
@@ -115,7 +115,7 @@ export function TeacherDashboard() {
   const handleDeleteStudent = async (id: bigint) => {
     if (!actor) return;
     try {
-      await (actor as any).deleteStudent(id);
+      await actor.deleteStudent(id);
       setStudents((prev) => prev.filter((s) => s.id !== id));
       toast.success("Student removed");
     } catch {
@@ -143,7 +143,7 @@ export function TeacherDashboard() {
       <aside className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col shrink-0">
         <div className="p-6 border-b border-sidebar-border">
           <img
-            src="/assets/uploads/classio_logo_reel_compressed-019d290d-aec1-724b-a11c-a9a7f8c9394d-1.jpeg"
+            src="/assets/classio_logo_reel_compressed-019d290d-aec1-724b-a11c-a9a7f8c9394d.jpeg"
             alt="Classio"
             className="h-9 w-auto rounded object-contain"
           />

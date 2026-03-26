@@ -62,6 +62,25 @@ export interface http_request_result {
   'body' : Uint8Array,
   'headers' : Array<http_header>,
 }
+export interface TeacherRecord {
+  'id': bigint;
+  'name': string;
+  'email': string;
+  'createdAt': Time;
+}
+export interface StudentRecord {
+  'id': bigint;
+  'schoolName': string;
+  'studentName': string;
+  'mobileNumber': string;
+  'teacherId': bigint;
+  'createdAt': Time;
+}
+export interface StudentProgress {
+  'currentModule': string;
+  'currentLesson': bigint;
+  'lastUpdated': Time;
+}
 export interface _SERVICE {
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
@@ -84,6 +103,17 @@ export interface _SERVICE {
   'startChatSession' : ActorMethod<[], bigint>,
   'transform' : ActorMethod<[TransformationInput], TransformationOutput>,
   'updateLesson' : ActorMethod<[bigint, Lesson], boolean>,
+  'createTeacher': ActorMethod<[string, string], bigint>;
+  'deleteTeacher': ActorMethod<[bigint], boolean>;
+  'getAllTeachers': ActorMethod<[], Array<TeacherRecord>>;
+  'getTeacherById': ActorMethod<[bigint], [] | [TeacherRecord]>;
+  'createStudent': ActorMethod<[string, string, string, bigint], bigint>;
+  'deleteStudent': ActorMethod<[bigint], boolean>;
+  'getStudentsByTeacher': ActorMethod<[bigint], Array<StudentRecord>>;
+  'getAllStudents': ActorMethod<[], Array<StudentRecord>>;
+  'studentLogin': ActorMethod<[string, string, string], [] | [StudentRecord]>;
+  'updateStudentProgress': ActorMethod<[bigint, string, bigint], boolean>;
+  'getStudentProgress': ActorMethod<[bigint], [] | [StudentProgress]>;
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

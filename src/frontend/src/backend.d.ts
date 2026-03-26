@@ -91,4 +91,35 @@ export interface backendInterface {
     startChatSession(): Promise<bigint>;
     transform(input: TransformationInput): Promise<TransformationOutput>;
     updateLesson(lessonId: bigint, lesson: Lesson): Promise<boolean>;
+    createTeacher(name: string, email: string): Promise<bigint>;
+    deleteTeacher(teacherId: bigint): Promise<boolean>;
+    getAllTeachers(): Promise<Array<TeacherRecord>>;
+    getTeacherById(teacherId: bigint): Promise<TeacherRecord | null>;
+    teacherLogin(teacherId: bigint, email: string): Promise<TeacherRecord | null>;
+    createStudent(schoolName: string, studentName: string, mobileNumber: string, teacherId: bigint): Promise<bigint>;
+    deleteStudent(studentId: bigint): Promise<boolean>;
+    getStudentsByTeacher(teacherId: bigint): Promise<Array<StudentRecord>>;
+    getAllStudents(): Promise<Array<StudentRecord>>;
+    studentLogin(schoolName: string, studentName: string, mobileNumber: string): Promise<StudentRecord | null>;
+    updateStudentProgress(studentId: bigint, currentModule: string, currentLesson: bigint): Promise<boolean>;
+    getStudentProgress(studentId: bigint): Promise<StudentProgress | null>;
+}
+export interface TeacherRecord {
+    id: bigint;
+    name: string;
+    email: string;
+    createdAt: bigint;
+}
+export interface StudentRecord {
+    id: bigint;
+    schoolName: string;
+    studentName: string;
+    mobileNumber: string;
+    teacherId: bigint;
+    createdAt: bigint;
+}
+export interface StudentProgress {
+    currentModule: string;
+    currentLesson: bigint;
+    lastUpdated: bigint;
 }

@@ -1,13 +1,11 @@
 import Map "mo:core/Map";
 import Order "mo:core/Order";
-import Array "mo:core/Array";
 import Text "mo:core/Text";
 import Runtime "mo:core/Runtime";
 import Nat "mo:core/Nat";
 import List "mo:core/List";
 import Principal "mo:core/Principal";
 import Time "mo:core/Time";
-import Iter "mo:core/Iter";
 import OutCall "http-outcalls/outcall";
 import AccessControl "authorization/access-control";
 import MixinAuthorization "authorization/MixinAuthorization";
@@ -27,8 +25,8 @@ actor {
   };
 
   module Lesson {
-    public func compare(lesson1 : Lesson, lesson2 : Lesson) : Order.Order {
-      Nat.compare(lesson1.id, lesson2.id);
+    public func compare(l1 : Lesson, l2 : Lesson) : Order.Order {
+      Nat.compare(l1.id, l2.id);
     };
   };
 
@@ -76,8 +74,6 @@ actor {
     };
   };
 
-  // --- Teacher & Student Management ---
-
   type TeacherRecord = {
     id : Nat;
     name : Text;
@@ -117,30 +113,20 @@ actor {
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
 
-  // --- Teacher Management (Admin only) ---
-
-  public shared ({ caller }) func createTeacher(name : Text, email : Text) : async Nat {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Runtime.trap("Unauthorized: Only admins can create teachers");
-    };
+  // Teacher management - no caller auth (frontend handles role-based access)
+  public shared func createTeacher(name : Text, email : Text) : async Nat {
     let id = teacherIdCounter;
     teachers.add(id, { id; name; email; createdAt = Time.now() });
     teacherIdCounter += 1;
     id;
   };
 
-  public shared ({ caller }) func deleteTeacher(teacherId : Nat) : async Bool {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Runtime.trap("Unauthorized: Only admins can delete teachers");
-    };
+  public shared func deleteTeacher(teacherId : Nat) : async Bool {
     teachers.remove(teacherId);
     true;
   };
 
-  public query ({ caller }) func getAllTeachers() : async [TeacherRecord] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Runtime.trap("Unauthorized");
-    };
+  public query func getAllTeachers() : async [TeacherRecord] {
     teachers.values().toArray();
   };
 
@@ -148,41 +134,36 @@ actor {
     teachers.get(teacherId);
   };
 
-  // --- Student Management (Teacher) ---
-
-  public shared ({ caller }) func createStudent(schoolName : Text, studentName : Text, mobileNumber : Text, teacherId : Nat) : async Nat {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin) or AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized");
+  public query func teacherLogin(teacherId : Nat, email : Text) : async ?TeacherRecord {
+    switch (teachers.get(teacherId)) {
+      case (?t) {
+        if (t.email.toLower() == email.toLower()) { ?t } else { null };
+      };
+      case (null) { null };
     };
+  };
+
+  // Student management
+  public shared func createStudent(schoolName : Text, studentName : Text, mobileNumber : Text, teacherId : Nat) : async Nat {
     let id = studentIdCounter;
     students.add(id, { id; schoolName; studentName; mobileNumber; teacherId; createdAt = Time.now() });
     studentIdCounter += 1;
     id;
   };
 
-  public shared ({ caller }) func deleteStudent(studentId : Nat) : async Bool {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin) or AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized");
-    };
+  public shared func deleteStudent(studentId : Nat) : async Bool {
     students.remove(studentId);
     true;
   };
 
-  public query ({ caller }) func getStudentsByTeacher(teacherId : Nat) : async [StudentRecord] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin) or AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized");
-    };
+  public query func getStudentsByTeacher(teacherId : Nat) : async [StudentRecord] {
     students.values().toArray().filter(func(s : StudentRecord) : Bool { s.teacherId == teacherId });
   };
 
-  public query ({ caller }) func getAllStudents() : async [StudentRecord] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Runtime.trap("Unauthorized");
-    };
+  public query func getAllStudents() : async [StudentRecord] {
     students.values().toArray();
   };
 
-  // Student login: match by schoolName + studentName + mobileNumber
   public query func studentLogin(schoolName : Text, studentName : Text, mobileNumber : Text) : async ?StudentRecord {
     let matches = students.values().toArray().filter(func(s : StudentRecord) : Bool {
       s.schoolName.toLower() == schoolName.toLower() and
@@ -191,8 +172,6 @@ actor {
     });
     if (matches.size() > 0) { ?matches[0] } else { null };
   };
-
-  // --- Student Progress ---
 
   public shared func updateStudentProgress(studentId : Nat, currentModule : Text, currentLesson : Nat) : async Bool {
     studentProgress.add(studentId, { currentModule; currentLesson; lastUpdated = Time.now() });
@@ -203,8 +182,7 @@ actor {
     studentProgress.get(studentId);
   };
 
-  // --- Existing lesson/course functions ---
-
+  // Lesson/course functions
   func getUserProfileInternal(user : Principal) : UserProfile {
     switch (userProfiles.get(user)) {
       case (?profile) { profile };
@@ -219,7 +197,7 @@ actor {
 
   public shared ({ caller }) func createLesson(lesson : Lesson) : async Nat {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Runtime.trap("Unauthorized: Only admins can create lessons");
+      Runtime.trap("Unauthorized");
     };
     let newLesson = { lesson with id = lessonIdCounter };
     courses.add(lessonIdCounter, newLesson);

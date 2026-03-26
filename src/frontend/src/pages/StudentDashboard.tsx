@@ -283,7 +283,7 @@ export function StudentDashboard() {
     );
 
     if (actor) {
-      (actor as any)
+      actor
         .updateStudentProgress(
           BigInt(String(student.id)),
           module.name,
@@ -438,7 +438,7 @@ export function StudentDashboard() {
     <div className="min-h-screen bg-background gradient-bg">
       <header className="sticky top-0 z-20 bg-background/80 backdrop-blur border-b border-border px-6 py-3 flex items-center justify-between">
         <img
-          src="/assets/uploads/classio_logo_reel_compressed-019d290d-aec1-724b-a11c-a9a7f8c9394d-1.jpeg"
+          src="/assets/classio_logo_reel_compressed-019d290d-aec1-724b-a11c-a9a7f8c9394d.jpeg"
           alt="Classio"
           className="h-9 w-auto rounded object-contain"
         />

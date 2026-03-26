@@ -152,6 +152,25 @@ export enum UserRole {
     user = "user",
     guest = "guest"
 }
+export interface TeacherRecord {
+    id: bigint;
+    name: string;
+    email: string;
+    createdAt: bigint;
+}
+export interface StudentRecord {
+    id: bigint;
+    schoolName: string;
+    studentName: string;
+    mobileNumber: string;
+    teacherId: bigint;
+    createdAt: bigint;
+}
+export interface StudentProgress {
+    currentModule: string;
+    currentLesson: bigint;
+    lastUpdated: bigint;
+}
 export interface backendInterface {
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
@@ -174,6 +193,17 @@ export interface backendInterface {
     startChatSession(): Promise<bigint>;
     transform(input: TransformationInput): Promise<TransformationOutput>;
     updateLesson(lessonId: bigint, lesson: Lesson): Promise<boolean>;
+    createTeacher(name: string, email: string): Promise<bigint>;
+    deleteTeacher(teacherId: bigint): Promise<boolean>;
+    getAllTeachers(): Promise<Array<TeacherRecord>>;
+    getTeacherById(teacherId: bigint): Promise<TeacherRecord | null>;
+    createStudent(schoolName: string, studentName: string, mobileNumber: string, teacherId: bigint): Promise<bigint>;
+    deleteStudent(studentId: bigint): Promise<boolean>;
+    getStudentsByTeacher(teacherId: bigint): Promise<Array<StudentRecord>>;
+    getAllStudents(): Promise<Array<StudentRecord>>;
+    studentLogin(schoolName: string, studentName: string, mobileNumber: string): Promise<StudentRecord | null>;
+    updateStudentProgress(studentId: bigint, currentModule: string, currentLesson: bigint): Promise<boolean>;
+    getStudentProgress(studentId: bigint): Promise<StudentProgress | null>;
 }
 import type { AgeGroup as _AgeGroup, CourseLevel as _CourseLevel, Lesson as _Lesson, LessonType as _LessonType, UserProfile as _UserProfile, UserRole as _UserRole } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
@@ -471,6 +501,139 @@ export class Backend implements backendInterface {
             const result = await this.actor.updateLesson(arg0, to_candid_Lesson_n3(this._uploadFile, this._downloadFile, arg1));
             return result;
         }
+    }
+    async createTeacher(name: string, email: string): Promise<bigint> {
+        if (this.processError) {
+            try {
+                return await this.actor.createTeacher(name, email);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        }
+        return await this.actor.createTeacher(name, email);
+    }
+    async deleteTeacher(teacherId: bigint): Promise<boolean> {
+        if (this.processError) {
+            try {
+                return await this.actor.deleteTeacher(teacherId);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        }
+        return await this.actor.deleteTeacher(teacherId);
+    }
+    async getAllTeachers(): Promise<Array<TeacherRecord>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getAllTeachers();
+                return result.map(r => ({ id: r.id, name: r.name, email: r.email, createdAt: r.createdAt }));
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        }
+        const result = await this.actor.getAllTeachers();
+        return result.map(r => ({ id: r.id, name: r.name, email: r.email, createdAt: r.createdAt }));
+    }
+    async getTeacherById(teacherId: bigint): Promise<TeacherRecord | null> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getTeacherById(teacherId);
+                return result.length === 0 ? null : { id: result[0].id, name: result[0].name, email: result[0].email, createdAt: result[0].createdAt };
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        }
+        const result = await this.actor.getTeacherById(teacherId);
+        return result.length === 0 ? null : { id: result[0].id, name: result[0].name, email: result[0].email, createdAt: result[0].createdAt };
+    }
+    async createStudent(schoolName: string, studentName: string, mobileNumber: string, teacherId: bigint): Promise<bigint> {
+        if (this.processError) {
+            try {
+                return await this.actor.createStudent(schoolName, studentName, mobileNumber, teacherId);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        }
+        return await this.actor.createStudent(schoolName, studentName, mobileNumber, teacherId);
+    }
+    async deleteStudent(studentId: bigint): Promise<boolean> {
+        if (this.processError) {
+            try {
+                return await this.actor.deleteStudent(studentId);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        }
+        return await this.actor.deleteStudent(studentId);
+    }
+    async getStudentsByTeacher(teacherId: bigint): Promise<Array<StudentRecord>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getStudentsByTeacher(teacherId);
+                return result.map(r => ({ id: r.id, schoolName: r.schoolName, studentName: r.studentName, mobileNumber: r.mobileNumber, teacherId: r.teacherId, createdAt: r.createdAt }));
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        }
+        const result = await this.actor.getStudentsByTeacher(teacherId);
+        return result.map(r => ({ id: r.id, schoolName: r.schoolName, studentName: r.studentName, mobileNumber: r.mobileNumber, teacherId: r.teacherId, createdAt: r.createdAt }));
+    }
+    async getAllStudents(): Promise<Array<StudentRecord>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getAllStudents();
+                return result.map(r => ({ id: r.id, schoolName: r.schoolName, studentName: r.studentName, mobileNumber: r.mobileNumber, teacherId: r.teacherId, createdAt: r.createdAt }));
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        }
+        const result = await this.actor.getAllStudents();
+        return result.map(r => ({ id: r.id, schoolName: r.schoolName, studentName: r.studentName, mobileNumber: r.mobileNumber, teacherId: r.teacherId, createdAt: r.createdAt }));
+    }
+    async studentLogin(schoolName: string, studentName: string, mobileNumber: string): Promise<StudentRecord | null> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.studentLogin(schoolName, studentName, mobileNumber);
+                return result.length === 0 ? null : { id: result[0].id, schoolName: result[0].schoolName, studentName: result[0].studentName, mobileNumber: result[0].mobileNumber, teacherId: result[0].teacherId, createdAt: result[0].createdAt };
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        }
+        const result = await this.actor.studentLogin(schoolName, studentName, mobileNumber);
+        return result.length === 0 ? null : { id: result[0].id, schoolName: result[0].schoolName, studentName: result[0].studentName, mobileNumber: result[0].mobileNumber, teacherId: result[0].teacherId, createdAt: result[0].createdAt };
+    }
+    async updateStudentProgress(studentId: bigint, currentModule: string, currentLesson: bigint): Promise<boolean> {
+        if (this.processError) {
+            try {
+                return await this.actor.updateStudentProgress(studentId, currentModule, currentLesson);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        }
+        return await this.actor.updateStudentProgress(studentId, currentModule, currentLesson);
+    }
+    async getStudentProgress(studentId: bigint): Promise<StudentProgress | null> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getStudentProgress(studentId);
+                return result.length === 0 ? null : { currentModule: result[0].currentModule, currentLesson: result[0].currentLesson, lastUpdated: result[0].lastUpdated };
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        }
+        const result = await this.actor.getStudentProgress(studentId);
+        return result.length === 0 ? null : { currentModule: result[0].currentModule, currentLesson: result[0].currentLesson, lastUpdated: result[0].lastUpdated };
     }
 }
 function from_candid_AgeGroup_n18(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _AgeGroup): AgeGroup {

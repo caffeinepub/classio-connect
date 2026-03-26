@@ -20,43 +20,43 @@
   :root {
     --radius: 0.75rem;
 
-    /* Classio Connect — Dark EdTech Theme */
-    --background: 0.09 0.015 255;
-    --foreground: 0.97 0.005 240;
-    --card: 0.13 0.022 255;
-    --card-foreground: 0.97 0.005 240;
-    --popover: 0.13 0.022 255;
-    --popover-foreground: 0.97 0.005 240;
-    --primary: 0.75 0.18 210;
-    --primary-foreground: 0.09 0.015 255;
-    --secondary: 0.18 0.03 255;
-    --secondary-foreground: 0.97 0.005 240;
-    --muted: 0.18 0.025 255;
-    --muted-foreground: 0.6 0.02 250;
-    --accent: 0.18 0.03 255;
-    --accent-foreground: 0.75 0.18 210;
-    --destructive: 0.6 0.22 25;
-    --destructive-foreground: 0.97 0 0;
-    --success: 0.68 0.18 145;
-    --success-foreground: 0.09 0.015 255;
-    --border: 0.22 0.03 255;
-    --input: 0.22 0.03 255;
-    --ring: 0.75 0.18 210;
+    /* Classio Connect — Light EdTech Theme */
+    --background: 0.98 0.005 240;
+    --foreground: 0.15 0.02 255;
+    --card: 1 0 0;
+    --card-foreground: 0.15 0.02 255;
+    --popover: 1 0 0;
+    --popover-foreground: 0.15 0.02 255;
+    --primary: 0.55 0.2 255;
+    --primary-foreground: 1 0 0;
+    --secondary: 0.94 0.01 240;
+    --secondary-foreground: 0.15 0.02 255;
+    --muted: 0.94 0.01 240;
+    --muted-foreground: 0.5 0.02 250;
+    --accent: 0.92 0.03 250;
+    --accent-foreground: 0.55 0.2 255;
+    --destructive: 0.55 0.22 25;
+    --destructive-foreground: 1 0 0;
+    --success: 0.55 0.18 145;
+    --success-foreground: 1 0 0;
+    --border: 0.88 0.02 250;
+    --input: 0.88 0.02 250;
+    --ring: 0.55 0.2 255;
 
-    --chart-1: 0.75 0.18 210;
-    --chart-2: 0.68 0.18 145;
-    --chart-3: 0.72 0.2 50;
-    --chart-4: 0.65 0.22 300;
-    --chart-5: 0.7 0.18 30;
+    --chart-1: 0.55 0.2 255;
+    --chart-2: 0.55 0.18 145;
+    --chart-3: 0.65 0.2 50;
+    --chart-4: 0.55 0.22 300;
+    --chart-5: 0.6 0.18 30;
 
-    --sidebar: 0.11 0.018 255;
-    --sidebar-foreground: 0.97 0.005 240;
-    --sidebar-primary: 0.75 0.18 210;
-    --sidebar-primary-foreground: 0.09 0.015 255;
-    --sidebar-accent: 0.18 0.03 255;
-    --sidebar-accent-foreground: 0.75 0.18 210;
-    --sidebar-border: 0.22 0.03 255;
-    --sidebar-ring: 0.75 0.18 210;
+    --sidebar: 0.97 0.01 245;
+    --sidebar-foreground: 0.15 0.02 255;
+    --sidebar-primary: 0.55 0.2 255;
+    --sidebar-primary-foreground: 1 0 0;
+    --sidebar-accent: 0.92 0.03 250;
+    --sidebar-accent-foreground: 0.55 0.2 255;
+    --sidebar-border: 0.88 0.02 250;
+    --sidebar-ring: 0.55 0.2 255;
   }
 
   * {
@@ -81,70 +81,71 @@
 
 @layer utilities {
   .cyan-glow {
-    box-shadow: 0 0 20px oklch(0.75 0.18 210 / 0.3), 0 0 40px
-      oklch(0.75 0.18 210 / 0.1);
+    box-shadow: 0 0 20px oklch(0.55 0.2 255 / 0.2), 0 0 40px
+      oklch(0.55 0.2 255 / 0.08);
   }
   .cyan-glow-sm {
-    box-shadow: 0 0 10px oklch(0.75 0.18 210 / 0.25);
+    box-shadow: 0 0 10px oklch(0.55 0.2 255 / 0.15);
   }
   .cyan-glow-lg {
-    box-shadow: 0 0 30px oklch(0.75 0.18 210 / 0.35), 0 0 60px
-      oklch(0.75 0.18 210 / 0.15);
+    box-shadow: 0 0 30px oklch(0.55 0.2 255 / 0.25), 0 0 60px
+      oklch(0.55 0.2 255 / 0.1);
   }
   .card-dark {
-    background: oklch(0.13 0.022 255);
-    border: 1px solid oklch(0.22 0.03 255);
+    background: white;
+    border: 1px solid oklch(0.88 0.02 250);
+    box-shadow: 0 1px 3px oklch(0.55 0.2 255 / 0.06);
   }
   .card-dark-hover {
-    background: oklch(0.13 0.022 255);
-    border: 1px solid oklch(0.22 0.03 255);
+    background: white;
+    border: 1px solid oklch(0.88 0.02 250);
     transition: border-color 0.2s, box-shadow 0.2s;
   }
   .card-dark-hover:hover {
-    border-color: oklch(0.75 0.18 210 / 0.5);
-    box-shadow: 0 0 20px oklch(0.75 0.18 210 / 0.15);
+    border-color: oklch(0.55 0.2 255 / 0.4);
+    box-shadow: 0 0 20px oklch(0.55 0.2 255 / 0.1);
   }
   .gradient-cyan {
     background: linear-gradient(
       135deg,
-      oklch(0.75 0.18 210),
-      oklch(0.65 0.2 230)
+      oklch(0.55 0.2 255),
+      oklch(0.45 0.22 270)
     );
   }
   .gradient-bg {
     background: radial-gradient(
       ellipse at top,
-      oklch(0.14 0.04 240) 0%,
-      oklch(0.09 0.015 255) 60%
+      oklch(0.95 0.03 250) 0%,
+      oklch(0.98 0.005 240) 60%
     );
   }
   .text-cyan {
-    color: oklch(0.75 0.18 210);
+    color: oklch(0.55 0.2 255);
   }
   .border-cyan {
-    border-color: oklch(0.75 0.18 210);
+    border-color: oklch(0.55 0.2 255);
   }
   .progress-bar-cyan {
     background: linear-gradient(
       90deg,
-      oklch(0.75 0.18 210),
-      oklch(0.65 0.2 230)
+      oklch(0.55 0.2 255),
+      oklch(0.45 0.22 270)
     );
   }
   .bg-success {
     background-color: oklch(var(--success));
   }
   .text-success {
-    color: oklch(0.68 0.18 145);
+    color: oklch(0.55 0.18 145);
   }
   .scrollbar-dark::-webkit-scrollbar {
     width: 4px;
   }
   .scrollbar-dark::-webkit-scrollbar-track {
-    background: oklch(0.09 0.015 255);
+    background: oklch(0.95 0.005 240);
   }
   .scrollbar-dark::-webkit-scrollbar-thumb {
-    background: oklch(0.25 0.03 255);
+    background: oklch(0.82 0.02 250);
     border-radius: 2px;
   }
 }

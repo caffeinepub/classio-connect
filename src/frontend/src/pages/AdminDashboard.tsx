@@ -64,10 +64,7 @@ export function AdminDashboard() {
   useEffect(() => {
     if (!actor) return;
     setIsLoadingData(true);
-    Promise.all([
-      (actor as any).getAllTeachers(),
-      (actor as any).getAllStudents(),
-    ])
+    Promise.all([actor.getAllTeachers(), actor.getAllStudents()])
       .then(([teacherList, studentList]) => {
         setTeachers(teacherList || []);
         setTotalStudents((studentList || []).length);
@@ -85,7 +82,7 @@ export function AdminDashboard() {
     if (!actor) return;
     setIsAdding(true);
     try {
-      const id = await (actor as any).createTeacher(
+      const id = await actor.createTeacher(
         newTeacherName.trim(),
         newTeacherEmail.trim(),
       );
@@ -112,7 +109,7 @@ export function AdminDashboard() {
   const handleDeleteTeacher = async (id: bigint) => {
     if (!actor) return;
     try {
-      await (actor as any).deleteTeacher(id);
+      await actor.deleteTeacher(id);
       setTeachers((prev) => prev.filter((t) => t.id !== id));
       toast.success("Teacher deleted");
     } catch {
@@ -140,7 +137,7 @@ export function AdminDashboard() {
       <aside className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col shrink-0">
         <div className="p-6 border-b border-sidebar-border">
           <img
-            src="/assets/uploads/classio_logo_reel_compressed-019d290d-aec1-724b-a11c-a9a7f8c9394d-1.jpeg"
+            src="/assets/classio_logo_reel_compressed-019d290d-aec1-724b-a11c-a9a7f8c9394d.jpeg"
             alt="Classio"
             className="h-9 w-auto rounded object-contain"
           />
@@ -169,6 +166,150 @@ export function AdminDashboard() {
             </button>
           ))}
         </nav>
+
+        {/* Education Illustration */}
+        <div className="px-4 py-5 flex justify-center">
+          <svg
+            width="160"
+            height="130"
+            viewBox="0 0 160 130"
+            role="img"
+            aria-label="Education illustration"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            {/* Desk */}
+            <rect
+              x="20"
+              y="100"
+              width="120"
+              height="8"
+              rx="4"
+              fill="oklch(0.88 0.02 250)"
+            />
+            {/* Book stack */}
+            <rect
+              x="30"
+              y="76"
+              width="36"
+              height="6"
+              rx="2"
+              fill="oklch(0.55 0.2 255)"
+            />
+            <rect
+              x="32"
+              y="70"
+              width="32"
+              height="6"
+              rx="2"
+              fill="oklch(0.65 0.18 280)"
+            />
+            <rect
+              x="34"
+              y="64"
+              width="28"
+              height="6"
+              rx="2"
+              fill="oklch(0.55 0.22 300)"
+            />
+            {/* Open book */}
+            <path
+              d="M75 60 Q80 56 85 60 L85 90 Q80 86 75 90 Z"
+              fill="oklch(0.94 0.01 240)"
+              stroke="oklch(0.55 0.2 255)"
+              strokeWidth="1.5"
+            />
+            <path
+              d="M85 60 Q90 56 95 60 L95 90 Q90 86 85 90 Z"
+              fill="oklch(0.94 0.01 240)"
+              stroke="oklch(0.55 0.2 255)"
+              strokeWidth="1.5"
+            />
+            <line
+              x1="85"
+              y1="60"
+              x2="85"
+              y2="90"
+              stroke="oklch(0.55 0.2 255)"
+              strokeWidth="1"
+            />
+            {/* Lines on book */}
+            <line
+              x1="78"
+              y1="70"
+              x2="83"
+              y2="70"
+              stroke="oklch(0.75 0.1 255)"
+              strokeWidth="1"
+            />
+            <line
+              x1="78"
+              y1="75"
+              x2="83"
+              y2="75"
+              stroke="oklch(0.75 0.1 255)"
+              strokeWidth="1"
+            />
+            <line
+              x1="78"
+              y1="80"
+              x2="83"
+              y2="80"
+              stroke="oklch(0.75 0.1 255)"
+              strokeWidth="1"
+            />
+            <line
+              x1="87"
+              y1="70"
+              x2="92"
+              y2="70"
+              stroke="oklch(0.75 0.1 255)"
+              strokeWidth="1"
+            />
+            <line
+              x1="87"
+              y1="75"
+              x2="92"
+              y2="75"
+              stroke="oklch(0.75 0.1 255)"
+              strokeWidth="1"
+            />
+            <line
+              x1="87"
+              y1="80"
+              x2="92"
+              y2="80"
+              stroke="oklch(0.75 0.1 255)"
+              strokeWidth="1"
+            />
+            {/* Graduation cap */}
+            <rect
+              x="98"
+              y="35"
+              width="32"
+              height="6"
+              rx="1"
+              fill="oklch(0.55 0.2 255)"
+            />
+            <polygon points="114,22 98,35 130,35" fill="oklch(0.45 0.22 270)" />
+            <circle cx="114" cy="22" r="4" fill="oklch(0.55 0.2 255)" />
+            {/* Tassel */}
+            <line
+              x1="130"
+              y1="35"
+              x2="134"
+              y2="50"
+              stroke="oklch(0.55 0.22 300)"
+              strokeWidth="1.5"
+            />
+            <circle cx="134" cy="52" r="2.5" fill="oklch(0.55 0.22 300)" />
+            {/* Stars */}
+            <circle cx="42" cy="30" r="2" fill="oklch(0.65 0.2 50)" />
+            <circle cx="55" cy="20" r="1.5" fill="oklch(0.55 0.2 255)" />
+            <circle cx="68" cy="32" r="1" fill="oklch(0.55 0.22 300)" />
+            <circle cx="140" cy="55" r="1.5" fill="oklch(0.65 0.2 50)" />
+          </svg>
+        </div>
 
         <div className="p-4 border-t border-sidebar-border">
           <button

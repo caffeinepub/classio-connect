@@ -71,6 +71,25 @@ export const TransformationOutput = IDL.Record({
   'body' : IDL.Vec(IDL.Nat8),
   'headers' : IDL.Vec(http_header),
 });
+export const TeacherRecord = IDL.Record({
+  'id': IDL.Nat,
+  'name': IDL.Text,
+  'email': IDL.Text,
+  'createdAt': Time,
+});
+export const StudentRecord = IDL.Record({
+  'id': IDL.Nat,
+  'schoolName': IDL.Text,
+  'studentName': IDL.Text,
+  'mobileNumber': IDL.Text,
+  'teacherId': IDL.Nat,
+  'createdAt': Time,
+});
+export const StudentProgress = IDL.Record({
+  'currentModule': IDL.Text,
+  'currentLesson': IDL.Nat,
+  'lastUpdated': Time,
+});
 
 export const idlService = IDL.Service({
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
@@ -110,6 +129,17 @@ export const idlService = IDL.Service({
       ['query'],
     ),
   'updateLesson' : IDL.Func([IDL.Nat, Lesson], [IDL.Bool], []),
+  'createTeacher': IDL.Func([IDL.Text, IDL.Text], [IDL.Nat], []),
+  'deleteTeacher': IDL.Func([IDL.Nat], [IDL.Bool], []),
+  'getAllTeachers': IDL.Func([], [IDL.Vec(TeacherRecord)], ['query']),
+  'getTeacherById': IDL.Func([IDL.Nat], [IDL.Opt(TeacherRecord)], ['query']),
+  'createStudent': IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Nat], [IDL.Nat], []),
+  'deleteStudent': IDL.Func([IDL.Nat], [IDL.Bool], []),
+  'getStudentsByTeacher': IDL.Func([IDL.Nat], [IDL.Vec(StudentRecord)], ['query']),
+  'getAllStudents': IDL.Func([], [IDL.Vec(StudentRecord)], ['query']),
+  'studentLogin': IDL.Func([IDL.Text, IDL.Text, IDL.Text], [IDL.Opt(StudentRecord)], ['query']),
+  'updateStudentProgress': IDL.Func([IDL.Nat, IDL.Text, IDL.Nat], [IDL.Bool], []),
+  'getStudentProgress': IDL.Func([IDL.Nat], [IDL.Opt(StudentProgress)], ['query']),
 });
 
 export const idlInitArgs = [];
@@ -175,7 +205,26 @@ export const idlFactory = ({ IDL }) => {
     'body' : IDL.Vec(IDL.Nat8),
     'headers' : IDL.Vec(http_header),
   });
-  
+  const TeacherRecord = IDL.Record({
+    'id': IDL.Nat,
+    'name': IDL.Text,
+    'email': IDL.Text,
+    'createdAt': Time,
+  });
+  const StudentRecord = IDL.Record({
+    'id': IDL.Nat,
+    'schoolName': IDL.Text,
+    'studentName': IDL.Text,
+    'mobileNumber': IDL.Text,
+    'teacherId': IDL.Nat,
+    'createdAt': Time,
+  });
+  const StudentProgress = IDL.Record({
+    'currentModule': IDL.Text,
+    'currentLesson': IDL.Nat,
+    'lastUpdated': Time,
+  });
+
   return IDL.Service({
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
@@ -218,6 +267,17 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'updateLesson' : IDL.Func([IDL.Nat, Lesson], [IDL.Bool], []),
+    'createTeacher': IDL.Func([IDL.Text, IDL.Text], [IDL.Nat], []),
+    'deleteTeacher': IDL.Func([IDL.Nat], [IDL.Bool], []),
+    'getAllTeachers': IDL.Func([], [IDL.Vec(TeacherRecord)], ['query']),
+    'getTeacherById': IDL.Func([IDL.Nat], [IDL.Opt(TeacherRecord)], ['query']),
+    'createStudent': IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Nat], [IDL.Nat], []),
+    'deleteStudent': IDL.Func([IDL.Nat], [IDL.Bool], []),
+    'getStudentsByTeacher': IDL.Func([IDL.Nat], [IDL.Vec(StudentRecord)], ['query']),
+    'getAllStudents': IDL.Func([], [IDL.Vec(StudentRecord)], ['query']),
+    'studentLogin': IDL.Func([IDL.Text, IDL.Text, IDL.Text], [IDL.Opt(StudentRecord)], ['query']),
+    'updateStudentProgress': IDL.Func([IDL.Nat, IDL.Text, IDL.Nat], [IDL.Bool], []),
+    'getStudentProgress': IDL.Func([IDL.Nat], [IDL.Opt(StudentProgress)], ['query']),
   });
 };
 
