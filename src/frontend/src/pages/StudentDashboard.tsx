@@ -1,9 +1,35 @@
+import { ConversationModule } from "@/components/modules/ConversationModule";
+import { GrammarModule } from "@/components/modules/GrammarModule";
+import { ListeningModule } from "@/components/modules/ListeningModule";
+import { PronunciationModule } from "@/components/modules/PronunciationModule";
+import { ReadingModule } from "@/components/modules/ReadingModule";
+import { VocabularyModule } from "@/components/modules/VocabularyModule";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, ChevronRight, LogOut, Send, X } from "lucide-react";
+import {
+  ArrowLeft,
+  BarChart2,
+  ChevronRight,
+  LogOut,
+  Send,
+  X,
+} from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { toast } from "sonner";
 import { useActor } from "../hooks/useActor";
 
@@ -29,155 +55,69 @@ type Module = {
   level: "Beginner" | "Intermediate" | "Advanced";
 };
 
+type LocalReport = {
+  moduleName: string;
+  score: number;
+  total: number;
+  percent: number;
+  remark: string;
+  completedAt: string;
+};
+
 const MODULES: Module[] = [
   {
     name: "Vocabulary Builder",
     icon: "📚",
     description: "Expand your word bank with 500+ essential English words",
-    totalLessons: 10,
+    totalLessons: 3,
     level: "Beginner",
   },
   {
     name: "Grammar Essentials",
     icon: "✏️",
     description: "Master tenses, articles, and sentence structures",
-    totalLessons: 12,
+    totalLessons: 2,
     level: "Intermediate",
   },
   {
     name: "Pronunciation Practice",
     icon: "🎤",
     description: "Sound like a native with phonetics and stress patterns",
-    totalLessons: 8,
+    totalLessons: 2,
     level: "Beginner",
   },
   {
     name: "Listening Skills",
     icon: "🎧",
     description: "Understand accents and improve comprehension",
-    totalLessons: 10,
+    totalLessons: 2,
     level: "Intermediate",
   },
   {
     name: "Conversation Practice",
     icon: "💬",
-    description: "Real-world dialogues and speaking confidence",
-    totalLessons: 15,
+    description: "Real-world dialogues and speaking confidence with AI",
+    totalLessons: 2,
     level: "Advanced",
   },
   {
     name: "Reading Comprehension",
     icon: "📖",
     description: "Articles, stories, and critical reading strategies",
-    totalLessons: 10,
+    totalLessons: 2,
     level: "Intermediate",
   },
 ];
 
-const LESSON_CONTENT: Record<
-  string,
-  Record<number, { title: string; content: string; exercise: string }>
-> = {
-  "Vocabulary Builder": {
-    1: {
-      title: "Everyday Objects",
-      content:
-        "Learn words for items you use daily. Today we cover: book, pen, table, chair, window, door, phone, bag, clock, water.",
-      exercise: "Fill in the blank: The _____ is on the table. (book/phone)",
-    },
-    2: {
-      title: "Action Words",
-      content:
-        "Verbs bring sentences to life! Master: run, walk, eat, drink, sleep, read, write, speak, listen, learn.",
-      exercise: "Form a sentence using the word 'listen'.",
-    },
-    3: {
-      title: "Describing Words",
-      content:
-        "Adjectives: big, small, fast, slow, happy, sad, beautiful, strong, quiet, loud. Use them to paint vivid pictures!",
-      exercise: "Describe your home using 3 adjectives.",
-    },
-  },
-  "Grammar Essentials": {
-    1: {
-      title: "Present Simple Tense",
-      content:
-        "Use Present Simple for habits and facts. Structure: Subject + Verb (+ s/es for he/she/it). Examples: 'She reads every day.' 'They play cricket.'",
-      exercise: "Write 3 sentences about your daily routine.",
-    },
-    2: {
-      title: "Articles: A, An, The",
-      content:
-        "A/An for indefinite nouns (first mention). The for specific nouns (known). 'I saw a dog. The dog was friendly.'",
-      exercise: "Fill: ___ apple a day keeps ___ doctor away.",
-    },
-    3: {
-      title: "Question Formation",
-      content:
-        "Questions use auxiliary verbs: Do/Does/Did/Is/Are/Was/Were. 'Do you like tea?' 'Is she coming?' 'Did they arrive?'",
-      exercise: "Convert to a question: 'He speaks English well.'",
-    },
-  },
-  "Pronunciation Practice": {
-    1: {
-      title: "Vowel Sounds",
-      content:
-        "English has 5 vowels (A, E, I, O, U) but 12+ sounds. Key pairs: /i:/ (see) vs /I/ (sit), /u:/ (food) vs /U/ (foot).",
-      exercise: "Practice: 'She sees the sea' - identify all vowel sounds.",
-    },
-    2: {
-      title: "Silent Letters",
-      content:
-        "Many English words have silent letters: knife (k silent), know (k silent), who (w silent), write (w silent).",
-      exercise: "Find the silent letter: knight, psychology, honest, island.",
-    },
-  },
-  "Listening Skills": {
-    1: {
-      title: "Active Listening",
-      content:
-        "Active listening means focusing fully on the speaker. Tips: maintain eye contact, nod, don't interrupt, paraphrase back. 'So what you're saying is...'",
-      exercise: "Listen to a 2-minute news clip and write 5 key points.",
-    },
-    2: {
-      title: "Accents & Dialects",
-      content:
-        "English has many accents: British RP, American General, Australian, Indian English. Each has unique stress patterns and vocabulary.",
-      exercise:
-        "Watch a short video in British and American English. Note 3 pronunciation differences.",
-    },
-  },
-  "Conversation Practice": {
-    1: {
-      title: "Greetings & Introductions",
-      content:
-        "Formal: 'Good morning, I'm [Name]. It's a pleasure to meet you.' Informal: 'Hey! I'm [Name]. Nice to meet you!' Practice transitions from formal to casual.",
-      exercise: "Role-play: Introduce yourself to a new classmate.",
-    },
-    2: {
-      title: "Asking for Directions",
-      content:
-        "Key phrases: 'Excuse me, could you tell me how to get to...?' 'Turn left/right at...' 'It's next to / opposite / across from...'",
-      exercise: "Write directions from your school to the nearest market.",
-    },
-  },
-  "Reading Comprehension": {
-    1: {
-      title: "Finding the Main Idea",
-      content:
-        "The main idea is what a paragraph is mostly about. It's usually in the topic sentence (first or last sentence). Supporting details explain or prove the main idea.",
-      exercise:
-        "Read: 'Dogs are loyal pets. They protect homes, comfort owners, and learn commands easily.' What's the main idea?",
-    },
-    2: {
-      title: "Making Inferences",
-      content:
-        "Inferences = reading between the lines. Use context clues + your knowledge. 'She grabbed an umbrella before leaving.' We infer it might rain.",
-      exercise:
-        "Infer: 'Tom stared at the menu for 10 minutes.' What is Tom doing?",
-    },
-  },
-};
+function generateRemark(moduleName: string, score: number): string {
+  if (score >= 90)
+    return `Excellent work on ${moduleName}! You have a strong grasp of this skill. Keep challenging yourself with advanced content!`;
+  if (score >= 70)
+    return `Good job on ${moduleName}! You understand the basics well. Review the areas where you hesitated to strengthen further.`;
+  if (score >= 50)
+    return `You're making progress in ${moduleName}. Focus on reviewing the concepts you found tricky - consistency is key!`;
+  return `Keep practicing ${moduleName}! Every attempt builds your skills. Try reviewing the lesson content and attempt again.`;
+}
 
 const LEXI_RESPONSES = [
   "Great question! Keep practicing and you'll improve every day! 🌟",
@@ -199,6 +139,7 @@ export function StudentDashboard() {
   const [savedProgress, setSavedProgress] = useState<StudentProgress | null>(
     null,
   );
+  const [assignedGrade, setAssignedGrade] = useState<number | null>(null);
   const [moduleProgress, setModuleProgress] = useState<Record<string, number>>(
     {},
   );
@@ -211,10 +152,11 @@ export function StudentDashboard() {
     {
       id: "init",
       role: "lexi",
-      text: "Hi there! I'm Lexi 🦉 Your English learning companion! Ask me anything about English or learning tips!",
+      text: "Hi there! I'm Lexi 🦩 Your English learning companion! Ask me anything about English or learning tips!",
     },
   ]);
   const [chatInput, setChatInput] = useState("");
+  const [reports, setReports] = useState<LocalReport[]>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -235,9 +177,7 @@ export function StudentDashboard() {
     if (storedProgress) {
       try {
         setSavedProgress(JSON.parse(storedProgress));
-      } catch {
-        /* ignore */
-      }
+      } catch {}
     }
     const mp: Record<string, number> = {};
     for (const m of MODULES) {
@@ -245,11 +185,28 @@ export function StudentDashboard() {
       if (val) mp[m.name] = Number(val);
     }
     setModuleProgress(mp);
+
+    // Load assigned grade
+    const storedStudent2 = localStorage.getItem("classio_student");
+    if (storedStudent2) {
+      try {
+        const s2 = JSON.parse(storedStudent2);
+        const g = localStorage.getItem(`classio_grade_${s2.id}`);
+        if (g) setAssignedGrade(Number(g));
+      } catch {}
+    }
   }, [navigate]);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, []); // intentionally empty - runs after each render when messages update
+    const storedStudent = localStorage.getItem("classio_student");
+    if (!storedStudent) return;
+    try {
+      const s = JSON.parse(storedStudent);
+      const key = `classio_reports_${s.id}`;
+      const saved = localStorage.getItem(key);
+      if (saved) setReports(JSON.parse(saved));
+    } catch {}
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("classio_role");
@@ -259,15 +216,71 @@ export function StudentDashboard() {
 
   const openModule = (module: Module) => {
     const currentLesson = moduleProgress[module.name] ?? 0;
-    const lesson = currentLesson >= module.totalLessons ? 1 : currentLesson + 1;
-    setActiveModuleLesson({ module, lesson });
+    const base = currentLesson >= module.totalLessons ? 1 : currentLesson + 1;
+    const lesson = Math.max(base, assignedGrade ?? 1);
+    const clampedLesson = Math.min(lesson, module.totalLessons);
+    setActiveModuleLesson({ module, lesson: clampedLesson });
   };
 
-  const handleMarkComplete = async () => {
+  const handleModuleComplete = async (score: number, total: number) => {
     if (!activeModuleLesson || !student) return;
     const { module, lesson } = activeModuleLesson;
-    const nextLesson = Math.min(lesson, module.totalLessons);
+    const percent = total > 0 ? Math.round((score / total) * 100) : 0;
+    const remark = generateRemark(module.name, percent);
 
+    // Save to backend
+    if (actor) {
+      (actor as any)
+        .saveActivityReport(
+          BigInt(String(student.id)),
+          module.name,
+          BigInt(score),
+          BigInt(total),
+          remark,
+        )
+        .catch(() => {});
+    }
+
+    // Save to localStorage
+    const newReport: LocalReport = {
+      moduleName: module.name,
+      score: percent,
+      total,
+      percent,
+      remark,
+      completedAt: new Date().toLocaleDateString(),
+    };
+    const key = `classio_reports_${String(student.id)}`;
+    const existing = localStorage.getItem(key);
+    let existing_reports: LocalReport[] = [];
+    try {
+      existing_reports = existing ? JSON.parse(existing) : [];
+    } catch {}
+    // Replace existing report for same module
+    const filtered = existing_reports.filter(
+      (r) => r.moduleName !== module.name,
+    );
+    const updated = [...filtered, newReport];
+    localStorage.setItem(key, JSON.stringify(updated));
+    setReports(updated);
+
+    // Adaptive lesson advancement based on performance
+    let nextLesson: number;
+    const minLesson = assignedGrade ?? 1;
+    if (percent >= 80) {
+      nextLesson = Math.min(lesson + 1, module.totalLessons);
+      toast.success(
+        `${module.name} completed! Score: ${percent}% 🎉 Moving to a harder lesson!`,
+      );
+    } else if (percent < 50) {
+      nextLesson = Math.max(lesson - 1, minLesson, 1);
+      toast.info(
+        `Score: ${percent}%. Let's try this lesson again for more practice.`,
+      );
+    } else {
+      nextLesson = Math.min(lesson, module.totalLessons);
+      toast.success(`${module.name} completed! Score: ${percent}% 🎉`);
+    }
     const newProgress = { ...moduleProgress, [module.name]: nextLesson };
     setModuleProgress(newProgress);
     localStorage.setItem(`classio_mod_${module.name}`, String(nextLesson));
@@ -292,14 +305,7 @@ export function StudentDashboard() {
         .catch(() => {});
     }
 
-    toast.success("Lesson completed! Great work! 🎉");
-
-    if (lesson < module.totalLessons) {
-      setActiveModuleLesson({ module, lesson: lesson + 1 });
-    } else {
-      toast.success(`You completed ${module.name}! 🏆`);
-      setActiveModuleLesson(null);
-    }
+    setActiveModuleLesson(null);
   };
 
   const getModuleProgressPercent = (module: Module) => {
@@ -312,7 +318,14 @@ export function StudentDashboard() {
       return "bg-success/20 text-success border-success/30";
     if (level === "Intermediate")
       return "bg-primary/20 text-primary border-primary/30";
-    return "bg-purple-500/20 text-purple-300 border-purple-500/30";
+    return "bg-purple-500/20 text-purple-600 border-purple-500/30";
+  };
+
+  const getScoreColor = (score: number) => {
+    if (score >= 90) return "bg-green-100 text-green-700 border-green-300";
+    if (score >= 70) return "bg-blue-100 text-blue-700 border-blue-300";
+    if (score >= 50) return "bg-yellow-100 text-yellow-700 border-yellow-300";
+    return "bg-red-100 text-red-700 border-red-300";
   };
 
   const sendChatMessage = () => {
@@ -329,35 +342,45 @@ export function StudentDashboard() {
     };
     setChatMessages((prev) => [...prev, userMsg, lexiMsg]);
     setChatInput("");
-  };
-
-  const getLessonContent = (moduleName: string, lessonNum: number) => {
-    const moduleContent = LESSON_CONTENT[moduleName];
-    if (!moduleContent)
-      return {
-        title: `Lesson ${lessonNum}`,
-        content: "Engaging lesson content coming soon!",
-        exercise: "Practice what you've learned today.",
-      };
-    return (
-      moduleContent[lessonNum] ||
-      moduleContent[1] || {
-        title: `Lesson ${lessonNum}`,
-        content: "Keep up the great work!",
-        exercise: "Review previous lessons.",
-      }
+    setTimeout(
+      () => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }),
+      100,
     );
   };
 
-  // Lesson View
+  const avgScore =
+    reports.length > 0
+      ? Math.round(reports.reduce((a, r) => a + r.percent, 0) / reports.length)
+      : null;
+
+  // Module lesson view
   if (activeModuleLesson) {
     const { module, lesson } = activeModuleLesson;
-    const lessonData = getLessonContent(module.name, lesson);
     const progressPct = Math.round((lesson / module.totalLessons) * 100);
 
+    const renderModule = () => {
+      const props = { lesson, onComplete: handleModuleComplete };
+      switch (module.name) {
+        case "Vocabulary Builder":
+          return <VocabularyModule {...props} />;
+        case "Grammar Essentials":
+          return <GrammarModule {...props} />;
+        case "Pronunciation Practice":
+          return <PronunciationModule {...props} />;
+        case "Listening Skills":
+          return <ListeningModule {...props} />;
+        case "Conversation Practice":
+          return <ConversationModule {...props} />;
+        case "Reading Comprehension":
+          return <ReadingModule {...props} />;
+        default:
+          return null;
+      }
+    };
+
     return (
-      <div className="min-h-screen bg-background gradient-bg">
-        <header className="sticky top-0 z-10 bg-background/90 backdrop-blur border-b border-border px-6 py-4 flex items-center justify-between">
+      <div className="min-h-screen bg-background">
+        <header className="sticky top-0 z-10 bg-white/90 backdrop-blur border-b border-border px-6 py-4 flex items-center justify-between">
           <button
             type="button"
             data-ocid="lesson.back.button"
@@ -373,61 +396,32 @@ export function StudentDashboard() {
             </span>
             <div className="w-32 bg-secondary rounded-full h-1.5">
               <div
-                className="progress-bar-cyan h-1.5 rounded-full transition-all"
+                className="bg-primary h-1.5 rounded-full transition-all"
                 style={{ width: `${progressPct}%` }}
               />
             </div>
           </div>
         </header>
-
-        <main className="max-w-2xl mx-auto px-6 py-10">
+        <main className="max-w-2xl mx-auto px-6 py-8">
           <motion.div
             key={`${module.name}-${lesson}`}
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             className="space-y-6"
           >
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <span className="text-3xl">{module.icon}</span>
-                <Badge className={`text-xs ${getLevelColor(module.level)}`}>
-                  {module.level}
-                </Badge>
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-3xl">{module.icon}</span>
+              <div>
+                <h1 className="text-xl font-bold">{module.name}</h1>
+                <p className="text-sm text-muted-foreground">Lesson {lesson}</p>
               </div>
-              <h1 className="text-2xl font-bold font-display">{module.name}</h1>
-              <h2 className="text-lg text-primary mt-1">{lessonData.title}</h2>
+              <Badge
+                className={`ml-auto text-xs ${getLevelColor(module.level)}`}
+              >
+                {module.level}
+              </Badge>
             </div>
-
-            <div className="card-dark rounded-2xl p-6 space-y-4">
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                Lesson Content
-              </h3>
-              <p className="text-foreground leading-relaxed">
-                {lessonData.content}
-              </p>
-            </div>
-
-            <div className="card-dark rounded-2xl p-6 border border-primary/20">
-              <h3 className="text-sm font-semibold text-primary uppercase tracking-wider mb-3">
-                📝 Practice Exercise
-              </h3>
-              <p className="text-foreground">{lessonData.exercise}</p>
-            </div>
-
-            <Button
-              data-ocid="lesson.complete.primary_button"
-              onClick={handleMarkComplete}
-              className="w-full gradient-cyan text-primary-foreground font-semibold h-12 text-base"
-            >
-              {lesson < module.totalLessons ? (
-                <>
-                  <span>Mark Complete &amp; Next</span>{" "}
-                  <ChevronRight className="ml-2 h-5 w-5" />
-                </>
-              ) : (
-                "Complete Module 🏆"
-              )}
-            </Button>
+            {renderModule()}
           </motion.div>
         </main>
       </div>
@@ -435,8 +429,8 @@ export function StudentDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background gradient-bg">
-      <header className="sticky top-0 z-20 bg-background/80 backdrop-blur border-b border-border px-6 py-3 flex items-center justify-between">
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-20 bg-white/80 backdrop-blur border-b border-border px-6 py-3 flex items-center justify-between">
         <img
           src="/assets/classio_logo_reel_compressed-019d290d-aec1-724b-a11c-a9a7f8c9394d.jpeg"
           alt="Classio"
@@ -505,9 +499,7 @@ export function StudentDashboard() {
         )}
 
         <div className="mb-6">
-          <h1 className="text-2xl font-bold font-display">
-            Your Learning Path
-          </h1>
+          <h1 className="text-2xl font-bold">Your Learning Path</h1>
           <p className="text-muted-foreground text-sm mt-1">
             Adaptive English course tailored for you
           </p>
@@ -518,6 +510,7 @@ export function StudentDashboard() {
             const pct = getModuleProgressPercent(module);
             const isStarted = pct > 0;
             const isCompleted = pct === 100;
+            const hasReport = reports.find((r) => r.moduleName === module.name);
             return (
               <motion.div
                 key={module.name}
@@ -525,7 +518,7 @@ export function StudentDashboard() {
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.07 }}
-                className="card-dark-hover rounded-2xl p-5 flex flex-col gap-4"
+                className="rounded-2xl p-5 flex flex-col gap-4 bg-white border border-border shadow-sm hover:shadow-md transition-shadow"
               >
                 <div className="flex items-start justify-between">
                   <span className="text-4xl">{module.icon}</span>
@@ -541,13 +534,22 @@ export function StudentDashboard() {
                     {module.description}
                   </p>
                 </div>
+                {hasReport && (
+                  <div
+                    className={`text-xs px-2 py-1 rounded-lg border ${getScoreColor(hasReport.percent)}`}
+                  >
+                    Last score: {hasReport.percent}%
+                  </div>
+                )}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">
                       {module.totalLessons} lessons
                     </span>
                     <span
-                      className={pct === 100 ? "text-success" : "text-primary"}
+                      className={
+                        pct === 100 ? "text-green-600" : "text-primary"
+                      }
                     >
                       {pct}%
                     </span>
@@ -557,7 +559,7 @@ export function StudentDashboard() {
                       initial={{ width: 0 }}
                       animate={{ width: `${pct}%` }}
                       transition={{ duration: 0.8, delay: i * 0.07 + 0.3 }}
-                      className="progress-bar-cyan h-1.5 rounded-full"
+                      className="bg-primary h-1.5 rounded-full"
                     />
                   </div>
                 </div>
@@ -567,7 +569,7 @@ export function StudentDashboard() {
                   size="sm"
                   className={
                     isCompleted
-                      ? "w-full bg-success/20 text-success border border-success/30 hover:bg-success/30"
+                      ? "w-full bg-green-100 text-green-700 border border-green-300 hover:bg-green-200"
                       : "w-full gradient-cyan text-primary-foreground"
                   }
                 >
@@ -582,20 +584,221 @@ export function StudentDashboard() {
           })}
         </div>
 
+        {/* Reports Section */}
+        {reports.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-12 space-y-6"
+            data-ocid="student.reports.section"
+          >
+            <div className="flex items-center gap-3">
+              <BarChart2 className="h-6 w-6 text-primary" />
+              <h2 className="text-xl font-bold">📊 My Learning Report Card</h2>
+            </div>
+
+            {avgScore !== null && (
+              <div className="rounded-2xl bg-gradient-to-r from-cyan-50 to-blue-50 border border-cyan-200 p-6 flex items-center gap-6">
+                <div className="text-center">
+                  <div className="text-5xl font-bold text-primary">
+                    {avgScore}%
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-1">
+                    Overall Average
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-foreground">
+                    Overall Performance
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {reports.length} module{reports.length > 1 ? "s" : ""}{" "}
+                    completed
+                  </p>
+                  <p className="text-sm text-cyan-700 mt-2">
+                    {generateRemark("your overall performance", avgScore)}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Bar Chart */}
+            <div className="rounded-2xl border border-border bg-white p-6">
+              <h3 className="font-semibold text-sm text-gray-700 mb-4">
+                📈 Score by Module
+              </h3>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart
+                  data={reports.map((r) => ({
+                    name: r.moduleName.split(" ")[0],
+                    score: r.percent,
+                    fill:
+                      r.percent >= 80
+                        ? "#22c55e"
+                        : r.percent >= 50
+                          ? "#f59e0b"
+                          : "#ef4444",
+                  }))}
+                  margin={{ top: 5, right: 10, left: -10, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                  <YAxis
+                    domain={[0, 100]}
+                    tick={{ fontSize: 11 }}
+                    tickFormatter={(v) => `${v}%`}
+                  />
+                  <Tooltip
+                    formatter={(value: number) => [`${value}%`, "Score"]}
+                  />
+                  <Bar dataKey="score" radius={[6, 6, 0, 0]}>
+                    {reports.map((r) => (
+                      <Cell
+                        key={`cell-${r.moduleName}`}
+                        fill={
+                          r.percent >= 80
+                            ? "#22c55e"
+                            : r.percent >= 50
+                              ? "#f59e0b"
+                              : "#ef4444"
+                        }
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Pie Chart */}
+            {reports.length > 1 && (
+              <div className="rounded-2xl border border-border bg-white p-6">
+                <h3 className="font-semibold text-sm text-gray-700 mb-4">
+                  🥧 Performance Distribution
+                </h3>
+                <div className="flex flex-col sm:flex-row items-center gap-6">
+                  <ResponsiveContainer width={200} height={200}>
+                    <PieChart>
+                      <Pie
+                        data={reports.map((r) => ({
+                          name: r.moduleName.split(" ")[0],
+                          value: r.percent,
+                        }))}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={50}
+                        outerRadius={80}
+                        paddingAngle={3}
+                        dataKey="value"
+                      >
+                        {reports.map((r) => (
+                          <Cell
+                            key={`pie-${r.moduleName}`}
+                            fill={
+                              r.percent >= 80
+                                ? "#22c55e"
+                                : r.percent >= 50
+                                  ? "#f59e0b"
+                                  : "#ef4444"
+                            }
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value: number) => [`${value}%`, "Score"]}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="flex flex-col gap-2 text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="w-3 h-3 rounded-full bg-green-500 inline-block" />{" "}
+                      Excellent ≥80%:{" "}
+                      {reports.filter((r) => r.percent >= 80).length} modules
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="w-3 h-3 rounded-full bg-yellow-500 inline-block" />{" "}
+                      Good 50–79%:{" "}
+                      {
+                        reports.filter((r) => r.percent >= 50 && r.percent < 80)
+                          .length
+                      }{" "}
+                      modules
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="w-3 h-3 rounded-full bg-red-500 inline-block" />{" "}
+                      Needs Work &lt;50%:{" "}
+                      {reports.filter((r) => r.percent < 50).length} modules
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {reports.map((report, i) => {
+                const mod = MODULES.find((m) => m.name === report.moduleName);
+                return (
+                  <motion.div
+                    key={report.moduleName}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    data-ocid={`student.report.item.${i + 1}`}
+                    className="rounded-2xl border border-border bg-white p-5 space-y-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl">{mod?.icon ?? "📚"}</span>
+                        <span className="font-semibold text-sm">
+                          {report.moduleName}
+                        </span>
+                      </div>
+                      <Badge
+                        className={`text-xs ${getScoreColor(report.percent)}`}
+                      >
+                        {report.percent}%
+                      </Badge>
+                    </div>
+                    <div className="w-full bg-gray-100 rounded-full h-2">
+                      <div
+                        className="h-2 rounded-full transition-all"
+                        style={{
+                          width: `${report.percent}%`,
+                          background:
+                            report.percent >= 80
+                              ? "#22c55e"
+                              : report.percent >= 50
+                                ? "#f59e0b"
+                                : "#ef4444",
+                        }}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      {report.remark}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      📅 {report.completedAt}
+                    </p>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+
         <div className="mt-12 text-center text-xs text-muted-foreground">
           © {new Date().getFullYear()}. Built with ❤️ using{" "}
           <a
             href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-cyan hover:underline"
+            className="text-primary hover:underline"
           >
             caffeine.ai
           </a>
         </div>
       </main>
 
-      {/* Lexi AI Tutor Button */}
+      {/* Lexi floating button */}
       <motion.button
         type="button"
         data-ocid="student.ai_tutor.open_modal_button"
@@ -603,12 +806,12 @@ export function StudentDashboard() {
         animate={{ scale: 1 }}
         transition={{ delay: 0.5, type: "spring" }}
         onClick={() => setChatOpen(true)}
-        className="fixed bottom-6 right-6 z-30 w-14 h-14 rounded-full gradient-cyan flex items-center justify-center text-2xl shadow-cyan-md animate-pulse-cyan"
+        className="fixed bottom-6 right-6 z-30 w-14 h-14 rounded-full gradient-cyan flex items-center justify-center text-2xl shadow-lg"
       >
-        🦉
+        🦩
       </motion.button>
 
-      {/* Lexi Chat Panel */}
+      {/* Lexi Chat */}
       <AnimatePresence>
         {chatOpen && (
           <motion.div
@@ -616,11 +819,11 @@ export function StudentDashboard() {
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-24 right-6 z-40 w-80 max-h-[480px] flex flex-col card-dark rounded-2xl shadow-cyan-md border border-primary/20 overflow-hidden"
+            className="fixed bottom-24 right-6 z-40 w-80 max-h-[480px] flex flex-col bg-white rounded-2xl shadow-xl border border-border overflow-hidden"
           >
             <div className="flex items-center justify-between px-4 py-3 border-b border-border gradient-cyan">
               <div className="flex items-center gap-2">
-                <span className="text-xl">🦉</span>
+                <span className="text-xl">🦩</span>
                 <div>
                   <p className="text-sm font-bold text-primary-foreground">
                     Lexi
@@ -639,17 +842,14 @@ export function StudentDashboard() {
                 <X className="h-4 w-4" />
               </button>
             </div>
-
-            <div className="flex-1 overflow-y-auto scrollbar-dark p-4 space-y-3">
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {chatMessages.map((msg) => (
                 <div
                   key={msg.id}
-                  className={`flex gap-2 ${
-                    msg.role === "user" ? "flex-row-reverse" : "flex-row"
-                  }`}
+                  className={`flex gap-2 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}
                 >
                   {msg.role === "lexi" && (
-                    <span className="text-xl shrink-0 mt-1">🦉</span>
+                    <span className="text-xl shrink-0 mt-1">🦩</span>
                   )}
                   <div
                     className={`max-w-[80%] px-3 py-2 rounded-xl text-sm leading-relaxed ${
@@ -664,7 +864,6 @@ export function StudentDashboard() {
               ))}
               <div ref={chatEndRef} />
             </div>
-
             <div className="p-3 border-t border-border flex gap-2">
               <input
                 data-ocid="student.ai_tutor.input"

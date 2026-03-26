@@ -1,0 +1,335 @@
+import { Button } from "@/components/ui/button";
+import { AnimatePresence, motion } from "motion/react";
+import { useState } from "react";
+
+type WordEntry = { word: string; meaning: string; emoji: string };
+
+const LESSON_WORDS: Record<number, WordEntry[]> = {
+  1: [
+    { word: "book", meaning: "a printed text document", emoji: "📗" },
+    { word: "pen", meaning: "a writing instrument", emoji: "✒️" },
+    { word: "table", meaning: "flat surface on legs", emoji: "🪑" },
+    { word: "chair", meaning: "seat with a back", emoji: "🪑" },
+    { word: "window", meaning: "glass opening in a wall", emoji: "🪟" },
+    { word: "door", meaning: "hinged panel for entry", emoji: "🚪" },
+    { word: "phone", meaning: "device for communication", emoji: "📱" },
+    { word: "bag", meaning: "container for carrying items", emoji: "👜" },
+  ],
+  2: [
+    { word: "run", meaning: "move fast on feet", emoji: "🏃" },
+    { word: "walk", meaning: "move at normal pace", emoji: "🚶" },
+    { word: "eat", meaning: "consume food", emoji: "🍽️" },
+    { word: "drink", meaning: "swallow liquid", emoji: "🥤" },
+    { word: "sleep", meaning: "rest with eyes closed", emoji: "😴" },
+    { word: "read", meaning: "look at written text", emoji: "📖" },
+    { word: "write", meaning: "form letters on paper", emoji: "✍️" },
+    { word: "speak", meaning: "say words aloud", emoji: "🗣️" },
+  ],
+  3: [
+    { word: "big", meaning: "large in size", emoji: "🐘" },
+    { word: "small", meaning: "little in size", emoji: "🐭" },
+    { word: "fast", meaning: "moving quickly", emoji: "⚡" },
+    { word: "slow", meaning: "moving at low speed", emoji: "🐢" },
+    { word: "happy", meaning: "feeling joyful", emoji: "😊" },
+    { word: "sad", meaning: "feeling unhappy", emoji: "😢" },
+    { word: "beautiful", meaning: "pleasing to look at", emoji: "🌸" },
+    { word: "strong", meaning: "having great power", emoji: "💪" },
+  ],
+  4: [
+    { word: "doctor", meaning: "a person who treats the sick", emoji: "👨‍⚕️" },
+    { word: "teacher", meaning: "a person who educates others", emoji: "👩‍🏫" },
+    {
+      word: "engineer",
+      meaning: "a person who designs and builds things",
+      emoji: "👷",
+    },
+    {
+      word: "farmer",
+      meaning: "a person who grows crops or raises animals",
+      emoji: "🧑‍🌾",
+    },
+    {
+      word: "chef",
+      meaning: "a professional cook in a restaurant",
+      emoji: "👨‍🍳",
+    },
+    { word: "driver", meaning: "a person who operates a vehicle", emoji: "🚗" },
+    { word: "nurse", meaning: "a person who cares for patients", emoji: "👩‍⚕️" },
+    { word: "pilot", meaning: "a person who flies an aircraft", emoji: "✈️" },
+  ],
+  5: [
+    { word: "rain", meaning: "water falling from clouds", emoji: "🌧️" },
+    {
+      word: "sun",
+      meaning: "the star that gives us light and warmth",
+      emoji: "☀️",
+    },
+    { word: "cloud", meaning: "a mass of water vapour in the sky", emoji: "☁️" },
+    { word: "wind", meaning: "moving air outside", emoji: "💨" },
+    { word: "mountain", meaning: "a very large natural hill", emoji: "⛰️" },
+    { word: "river", meaning: "a large natural flow of water", emoji: "🏞️" },
+    { word: "forest", meaning: "a large area covered with trees", emoji: "🌲" },
+    {
+      word: "snow",
+      meaning: "frozen water falling as white flakes",
+      emoji: "❄️",
+    },
+  ],
+  6: [
+    { word: "breakfast", meaning: "the first meal of the day", emoji: "🍳" },
+    { word: "lunch", meaning: "the midday meal", emoji: "🍱" },
+    { word: "dinner", meaning: "the main evening meal", emoji: "🍛" },
+    {
+      word: "snack",
+      meaning: "a small amount of food between meals",
+      emoji: "🥪",
+    },
+    {
+      word: "fruit",
+      meaning: "sweet food that grows on plants or trees",
+      emoji: "🍎",
+    },
+    {
+      word: "vegetable",
+      meaning: "a plant or part of a plant used as food",
+      emoji: "🥦",
+    },
+    {
+      word: "sweet",
+      meaning: "having a sugary taste; dessert-like",
+      emoji: "🍬",
+    },
+    { word: "spicy", meaning: "having a strong, hot flavour", emoji: "🌶️" },
+  ],
+};
+
+function shuffle<T>(arr: T[]): T[] {
+  return [...arr].sort(() => Math.random() - 0.5);
+}
+
+interface Props {
+  lesson: number;
+  onComplete: (score: number, total: number) => void;
+}
+
+export function VocabularyModule({ lesson, onComplete }: Props) {
+  const words = LESSON_WORDS[lesson] ?? LESSON_WORDS[1];
+  const matchWords = words.slice(0, 4);
+
+  const [phase, setPhase] = useState<"flashcard" | "match">("flashcard");
+  const [cardIndex, setCardIndex] = useState(0);
+  const [flipped, setFlipped] = useState(false);
+  const [selectedWord, setSelectedWord] = useState<string | null>(null);
+  const [matched, setMatched] = useState<Record<string, string>>({});
+  const [feedback, setFeedback] = useState<Record<string, "correct" | "wrong">>(
+    {},
+  );
+  const [shuffledDefs] = useState(() =>
+    shuffle(matchWords.map((w) => w.meaning)),
+  );
+  const [score, setScore] = useState(0);
+  const [done, setDone] = useState(false);
+
+  const currentWord = words[cardIndex];
+
+  const speakWord = (word: string) => {
+    try {
+      const u = new SpeechSynthesisUtterance(word);
+      u.rate = 0.85;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(u);
+    } catch {}
+  };
+
+  const nextCard = () => {
+    setFlipped(false);
+    if (cardIndex + 1 >= words.length) {
+      setPhase("match");
+    } else {
+      setCardIndex((p) => p + 1);
+    }
+  };
+
+  const handleSelectWord = (word: string) => {
+    if (matched[word]) return;
+    setSelectedWord(word);
+  };
+
+  const handleSelectDef = (def: string) => {
+    if (!selectedWord) return;
+    const correct = matchWords.find((w) => w.word === selectedWord)?.meaning;
+    const already = Object.values(matched).includes(def);
+    if (already) return;
+    if (correct === def) {
+      const newMatched = { ...matched, [selectedWord]: def };
+      setMatched(newMatched);
+      setFeedback((p) => ({ ...p, [selectedWord]: "correct" }));
+      setScore((p) => p + 1);
+      setSelectedWord(null);
+      if (Object.keys(newMatched).length === matchWords.length) {
+        setTimeout(() => setDone(true), 600);
+      }
+    } else {
+      const sw = selectedWord;
+      setFeedback((p) => ({ ...p, [sw]: "wrong" }));
+      setTimeout(() => {
+        setFeedback((p) => {
+          const n = { ...p };
+          delete n[sw];
+          return n;
+        });
+        setSelectedWord(null);
+      }, 800);
+    }
+  };
+
+  if (done) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="text-center py-12 space-y-4"
+      >
+        <div className="text-6xl">🏆</div>
+        <h3 className="text-2xl font-bold">Matching Complete!</h3>
+        <p className="text-muted-foreground">
+          You matched {score} out of {matchWords.length} correctly
+        </p>
+        <div className="text-4xl font-bold text-primary">
+          {Math.round((score / matchWords.length) * 100)}%
+        </div>
+        <Button
+          data-ocid="vocab.complete.primary_button"
+          onClick={() => onComplete(score, matchWords.length)}
+          className="gradient-cyan text-primary-foreground px-8"
+        >
+          Complete Lesson 🎉
+        </Button>
+      </motion.div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {phase === "flashcard" && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Word {cardIndex + 1} of {words.length}
+            </p>
+          </div>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={cardIndex}
+              initial={{ opacity: 0, x: 30 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -30 }}
+              className="cursor-pointer"
+              onClick={() => setFlipped((f) => !f)}
+            >
+              <div className="rounded-3xl border-2 border-primary/20 bg-gradient-to-br from-cyan-50 to-white min-h-48 flex flex-col items-center justify-center gap-3 p-8 shadow-lg">
+                <span className="text-6xl">{currentWord.emoji}</span>
+                <h2 className="text-4xl font-bold tracking-wide">
+                  {currentWord.word}
+                </h2>
+                {flipped ? (
+                  <motion.p
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-lg text-primary font-medium text-center"
+                  >
+                    {currentWord.meaning}
+                  </motion.p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Tap to reveal meaning
+                  </p>
+                )}
+              </div>
+            </motion.div>
+          </AnimatePresence>
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              className="flex-1 gap-2"
+              onClick={() => speakWord(currentWord.word)}
+            >
+              🔊 Hear Pronunciation
+            </Button>
+            <Button
+              className="flex-1 gradient-cyan text-primary-foreground"
+              onClick={nextCard}
+            >
+              {cardIndex + 1 >= words.length
+                ? "Start Matching →"
+                : "Next Word →"}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {phase === "match" && (
+        <div className="space-y-6">
+          <div className="text-center">
+            <h3 className="text-xl font-bold">Match the Words!</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Click a word, then its matching definition
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-3">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider text-center">
+                Words
+              </p>
+              {matchWords.map((w) => (
+                <button
+                  type="button"
+                  key={w.word}
+                  onClick={() => handleSelectWord(w.word)}
+                  disabled={!!matched[w.word]}
+                  className={`w-full py-3 px-4 rounded-xl border-2 text-sm font-semibold transition-all ${
+                    matched[w.word]
+                      ? "bg-green-100 border-green-400 text-green-700 cursor-default"
+                      : feedback[w.word] === "wrong"
+                        ? "bg-red-100 border-red-400 text-red-700"
+                        : selectedWord === w.word
+                          ? "bg-primary/20 border-primary text-primary"
+                          : "bg-white border-border hover:border-primary/50"
+                  }`}
+                >
+                  {w.emoji} {w.word}
+                </button>
+              ))}
+            </div>
+            <div className="space-y-3">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider text-center">
+                Meanings
+              </p>
+              {shuffledDefs.map((def) => {
+                const isMatched = Object.values(matched).includes(def);
+                return (
+                  <button
+                    type="button"
+                    key={def}
+                    onClick={() => handleSelectDef(def)}
+                    disabled={isMatched}
+                    className={`w-full py-3 px-4 rounded-xl border-2 text-xs text-left transition-all ${
+                      isMatched
+                        ? "bg-green-100 border-green-400 text-green-700 cursor-default"
+                        : "bg-white border-border hover:border-primary/50 hover:bg-primary/5"
+                    }`}
+                  >
+                    {def}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="text-center text-sm text-muted-foreground">
+            {Object.keys(matched).length} / {matchWords.length} matched
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

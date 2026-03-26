@@ -96,6 +96,16 @@ actor {
     lastUpdated : Time.Time;
   };
 
+  type ActivityReport = {
+    id : Nat;
+    studentId : Nat;
+    moduleName : Text;
+    score : Nat;
+    totalQuestions : Nat;
+    performanceRemark : Text;
+    completedAt : Time.Time;
+  };
+
   let courses = Map.empty<Nat, Lesson>();
   let userProfiles = Map.empty<Principal, UserProfile>();
   let userLessonCompletions = Map.empty<Principal, List.List<LessonCompletion>>();
@@ -107,13 +117,15 @@ actor {
   let teachers = Map.empty<Nat, TeacherRecord>();
   let students = Map.empty<Nat, StudentRecord>();
   let studentProgress = Map.empty<Nat, StudentProgress>();
+  let activityReports = Map.empty<Nat, ActivityReport>();
   var teacherIdCounter = 0;
   var studentIdCounter = 0;
+  var reportIdCounter = 0;
 
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
 
-  // Teacher management - no caller auth (frontend handles role-based access)
+  // Teacher management
   public shared func createTeacher(name : Text, email : Text) : async Nat {
     let id = teacherIdCounter;
     teachers.add(id, { id; name; email; createdAt = Time.now() });
@@ -180,6 +192,42 @@ actor {
 
   public query func getStudentProgress(studentId : Nat) : async ?StudentProgress {
     studentProgress.get(studentId);
+  };
+
+  // Activity Reports
+  public shared func saveActivityReport(studentId : Nat, moduleName : Text, score : Nat, totalQuestions : Nat, performanceRemark : Text) : async Nat {
+    let id = reportIdCounter;
+    activityReports.add(id, {
+      id;
+      studentId;
+      moduleName;
+      score;
+      totalQuestions;
+      performanceRemark;
+      completedAt = Time.now();
+    });
+    reportIdCounter += 1;
+    id;
+  };
+
+  public query func getReportsByStudent(studentId : Nat) : async [ActivityReport] {
+    activityReports.values().toArray().filter(func(r : ActivityReport) : Bool { r.studentId == studentId });
+  };
+
+  public query func getReportsByTeacher(teacherId : Nat) : async [ActivityReport] {
+    let teacherStudentIds = students.values().toArray()
+      .filter(func(s : StudentRecord) : Bool { s.teacherId == teacherId })
+      .map(func(s : StudentRecord) : Nat { s.id });
+    activityReports.values().toArray().filter(func(r : ActivityReport) : Bool {
+      for (sid in teacherStudentIds.vals()) {
+        if (sid == r.studentId) { return true };
+      };
+      false;
+    });
+  };
+
+  public query func getAllReports() : async [ActivityReport] {
+    activityReports.values().toArray();
   };
 
   // Lesson/course functions

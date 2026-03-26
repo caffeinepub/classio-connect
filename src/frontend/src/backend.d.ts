@@ -70,6 +70,15 @@ export enum UserRole {
     user = "user",
     guest = "guest"
 }
+export interface ActivityReport {
+    id: bigint;
+    studentId: bigint;
+    moduleName: string;
+    score: bigint;
+    totalQuestions: bigint;
+    performanceRemark: string;
+    completedAt: bigint;
+}
 export interface backendInterface {
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     createLesson(lesson: Lesson): Promise<bigint>;
@@ -103,6 +112,10 @@ export interface backendInterface {
     studentLogin(schoolName: string, studentName: string, mobileNumber: string): Promise<StudentRecord | null>;
     updateStudentProgress(studentId: bigint, currentModule: string, currentLesson: bigint): Promise<boolean>;
     getStudentProgress(studentId: bigint): Promise<StudentProgress | null>;
+    saveActivityReport(studentId: bigint, moduleName: string, score: bigint, totalQuestions: bigint, performanceRemark: string): Promise<bigint>;
+    getReportsByStudent(studentId: bigint): Promise<Array<ActivityReport>>;
+    getReportsByTeacher(teacherId: bigint): Promise<Array<ActivityReport>>;
+    getAllReports(): Promise<Array<ActivityReport>>;
 }
 export interface TeacherRecord {
     id: bigint;

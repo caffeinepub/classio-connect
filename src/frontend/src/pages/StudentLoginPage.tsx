@@ -4,15 +4,16 @@ import { Label } from "@/components/ui/label";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Loader2, Sparkles } from "lucide-react";
 import { motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useActor } from "../hooks/useActor";
 
 export function StudentLoginPage() {
   const navigate = useNavigate();
-  const { actor, isFetching } = useActor();
+  const { actor } = useActor();
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
+  const [waitingForActor, setWaitingForActor] = useState(false);
 
   const [schoolName, setSchoolName] = useState("");
   const [studentName, setStudentName] = useState("");
@@ -23,6 +24,25 @@ export function StudentLoginPage() {
     studentName: "",
     mobileNumber: "",
   });
+
+  // Store pending login data for retry when actor becomes available
+  const pendingLogin = useRef<{
+    school: string;
+    student: string;
+    mobile: string;
+  } | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Auto-retry login once actor becomes available
+  useEffect(() => {
+    if (actor && pendingLogin.current && waitingForActor) {
+      setWaitingForActor(false);
+      const { school, student, mobile } = pendingLogin.current;
+      pendingLogin.current = null;
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      performLogin(school, student, mobile);
+    }
+  }, [actor, waitingForActor]);
 
   const validate = () => {
     const errors = { schoolName: "", studentName: "", mobileNumber: "" };
@@ -43,21 +63,15 @@ export function StudentLoginPage() {
     return valid;
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginError("");
-    if (!validate()) return;
-    if (!actor) {
-      setLoginError("Connecting to network, please wait...");
-      return;
-    }
+  const performLogin = async (
+    school: string,
+    student: string,
+    mobile: string,
+  ) => {
     setIsLoading(true);
+    setLoginError("");
     try {
-      const result = await actor.studentLogin(
-        schoolName.trim(),
-        studentName.trim(),
-        mobileNumber.trim(),
-      );
+      const result = await actor!.studentLogin(school, student, mobile);
       if (result) {
         localStorage.setItem("classio_role", "student");
         localStorage.setItem("classio_student", JSON.stringify(result));
@@ -75,9 +89,41 @@ export function StudentLoginPage() {
     }
   };
 
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError("");
+    if (!validate()) return;
+
+    if (!actor) {
+      // Store form data and wait for actor
+      pendingLogin.current = {
+        school: schoolName.trim(),
+        student: studentName.trim(),
+        mobile: mobileNumber.trim(),
+      };
+      setWaitingForActor(true);
+      setLoginError("Connecting to server... Please wait.");
+      // 10-second timeout
+      timeoutRef.current = setTimeout(() => {
+        if (pendingLogin.current) {
+          pendingLogin.current = null;
+          setWaitingForActor(false);
+          setLoginError("Unable to connect. Please refresh and try again.");
+        }
+      }, 10000);
+      return;
+    }
+
+    await performLogin(
+      schoolName.trim(),
+      studentName.trim(),
+      mobileNumber.trim(),
+    );
+  };
+
   return (
     <div className="min-h-screen flex">
-      {/* LEFT TILE — Cyan gradient with illustration */}
+      {/* LEFT TILE */}
       <motion.div
         initial={{ opacity: 0, x: -40 }}
         animate={{ opacity: 1, x: 0 }}
@@ -88,7 +134,6 @@ export function StudentLoginPage() {
             "linear-gradient(145deg, #0891b2 0%, #0e7490 50%, #164e63 100%)",
         }}
       >
-        {/* Soft glow orbs */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div
             className="absolute top-[-5%] left-[-10%] w-72 h-72 rounded-full"
@@ -105,8 +150,6 @@ export function StudentLoginPage() {
             }}
           />
         </div>
-
-        {/* Logo */}
         <div className="relative z-10">
           <img
             src="/assets/classio_logo_reel_compressed-019d290d-aec1-724b-a11c-a9a7f8c9394d.jpeg"
@@ -114,8 +157,6 @@ export function StudentLoginPage() {
             className="h-12 w-auto rounded-lg object-contain"
           />
         </div>
-
-        {/* Center content */}
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-4">
             <Sparkles className="w-5 h-5 text-white opacity-90" />
@@ -132,8 +173,6 @@ export function StudentLoginPage() {
             Pick up right where you left off. Your progress, your pace —
             adaptive learning designed for you.
           </p>
-
-          {/* Illustration */}
           <div className="mt-6 flex justify-center">
             <img
               src="/assets/generated/login-communication-illustration.dim_600x700.png"
@@ -142,8 +181,6 @@ export function StudentLoginPage() {
               style={{ maxHeight: "280px" }}
             />
           </div>
-
-          {/* Stats bubbles */}
           <div className="mt-4 flex gap-4">
             {[
               { label: "Learners", value: "10K+" },
@@ -165,8 +202,6 @@ export function StudentLoginPage() {
             ))}
           </div>
         </div>
-
-        {/* Bottom */}
         <div className="relative z-10">
           <p className="text-xs text-white/50">
             © {new Date().getFullYear()} Classio Connect
@@ -174,7 +209,7 @@ export function StudentLoginPage() {
         </div>
       </motion.div>
 
-      {/* RIGHT TILE — White background */}
+      {/* RIGHT TILE */}
       <motion.div
         initial={{ opacity: 0, x: 40 }}
         animate={{ opacity: 1, x: 0 }}
@@ -182,7 +217,6 @@ export function StudentLoginPage() {
         className="flex-1 flex flex-col items-center justify-center p-8 md:p-12 bg-white"
       >
         <div className="w-full max-w-md">
-          {/* Back link */}
           <Link
             to="/"
             data-ocid="student_login.link"
@@ -191,7 +225,6 @@ export function StudentLoginPage() {
             <ArrowLeft className="w-4 h-4" />
             Back to Portal
           </Link>
-
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -204,15 +237,22 @@ export function StudentLoginPage() {
               Enter your school details to continue learning
             </p>
 
-            {/* Error alert */}
             {loginError && (
               <motion.div
                 data-ocid="student_login.error_state"
                 initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mb-5 flex items-start gap-3 rounded-lg px-4 py-3 text-sm bg-red-50 border border-red-200 text-red-700"
+                className={`mb-5 flex items-start gap-3 rounded-lg px-4 py-3 text-sm border ${
+                  waitingForActor
+                    ? "bg-blue-50 border-blue-200 text-blue-700"
+                    : "bg-red-50 border-red-200 text-red-700"
+                }`}
               >
-                <span className="mt-0.5">⚠</span>
+                {waitingForActor ? (
+                  <Loader2 className="h-4 w-4 animate-spin mt-0.5 shrink-0" />
+                ) : (
+                  <span className="mt-0.5">⚠</span>
+                )}
                 <span>{loginError}</span>
               </motion.div>
             )}
@@ -239,7 +279,6 @@ export function StudentLoginPage() {
                   </p>
                 )}
               </div>
-
               <div className="space-y-1.5">
                 <Label htmlFor="student-name" className="text-gray-700">
                   Student Name <span className="text-red-500">*</span>
@@ -261,7 +300,6 @@ export function StudentLoginPage() {
                   </p>
                 )}
               </div>
-
               <div className="space-y-1.5">
                 <Label htmlFor="mobile-number" className="text-gray-700">
                   Mobile Number <span className="text-red-500">*</span>
@@ -284,21 +322,20 @@ export function StudentLoginPage() {
                   </p>
                 )}
               </div>
-
               <Button
                 data-ocid="student.submit_button"
                 type="submit"
-                disabled={isLoading || isFetching}
+                disabled={isLoading || waitingForActor}
                 className="w-full font-semibold h-11 mt-2 text-white"
                 style={{
                   background:
                     "linear-gradient(135deg, #0891b2 0%, #0e7490 100%)",
                 }}
               >
-                {isLoading ? (
+                {isLoading || waitingForActor ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : null}
-                {isFetching
+                {waitingForActor
                   ? "Connecting..."
                   : isLoading
                     ? "Signing in..."
@@ -306,7 +343,6 @@ export function StudentLoginPage() {
               </Button>
             </form>
           </motion.div>
-
           <p className="mt-8 text-center text-xs text-gray-400">
             © {new Date().getFullYear()}. Built with love using{" "}
             <a

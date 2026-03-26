@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, BookOpen, Loader2 } from "lucide-react";
 import { motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useActor } from "../hooks/useActor";
 
@@ -13,6 +13,7 @@ export function TeacherLoginPage() {
   const { actor, isFetching } = useActor();
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
+  const [waitingForActor, setWaitingForActor] = useState(false);
 
   const [teacherId, setTeacherId] = useState("");
   const [teacherEmail, setTeacherEmail] = useState("");
@@ -20,6 +21,19 @@ export function TeacherLoginPage() {
     teacherId: "",
     teacherEmail: "",
   });
+
+  const pendingLogin = useRef<{ id: string; email: string } | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (actor && pendingLogin.current && waitingForActor) {
+      setWaitingForActor(false);
+      const { id, email } = pendingLogin.current;
+      pendingLogin.current = null;
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      performLogin(id, email);
+    }
+  }, [actor, waitingForActor]);
 
   const validate = () => {
     const errors = { teacherId: "", teacherEmail: "" };
@@ -36,20 +50,14 @@ export function TeacherLoginPage() {
     return valid;
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginError("");
-    if (!validate()) return;
-    if (!actor) {
-      setLoginError("Connecting to network, please wait...");
-      return;
-    }
+  const performLogin = async (id: string, email: string) => {
     setIsLoading(true);
+    setLoginError("");
     try {
-      const result = await (actor as any).getTeacherById(BigInt(teacherId));
-      if (result && result.email === teacherEmail) {
+      const result = await (actor as any).getTeacherById(BigInt(id));
+      if (result && result.email === email) {
         localStorage.setItem("classio_role", "teacher");
-        localStorage.setItem("classio_teacher_id", teacherId);
+        localStorage.setItem("classio_teacher_id", id);
         localStorage.setItem("classio_teacher_name", result.name);
         toast.success(`Welcome back, ${result.name}!`);
         navigate({ to: "/teacher" });
@@ -67,9 +75,33 @@ export function TeacherLoginPage() {
     }
   };
 
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError("");
+    if (!validate()) return;
+
+    if (!actor) {
+      pendingLogin.current = {
+        id: teacherId.trim(),
+        email: teacherEmail.trim(),
+      };
+      setWaitingForActor(true);
+      setLoginError("Connecting to server... Please wait.");
+      timeoutRef.current = setTimeout(() => {
+        if (pendingLogin.current) {
+          pendingLogin.current = null;
+          setWaitingForActor(false);
+          setLoginError("Unable to connect. Please refresh and try again.");
+        }
+      }, 10000);
+      return;
+    }
+
+    await performLogin(teacherId.trim(), teacherEmail.trim());
+  };
+
   return (
     <div className="min-h-screen flex">
-      {/* LEFT TILE — Cyan gradient with illustration */}
       <motion.div
         initial={{ opacity: 0, x: -40 }}
         animate={{ opacity: 1, x: 0 }}
@@ -96,7 +128,6 @@ export function TeacherLoginPage() {
             }}
           />
         </div>
-
         <div className="relative z-10">
           <img
             src="/assets/classio_logo_reel_compressed-019d290d-aec1-724b-a11c-a9a7f8c9394d.jpeg"
@@ -104,7 +135,6 @@ export function TeacherLoginPage() {
             className="h-12 w-auto rounded-lg object-contain"
           />
         </div>
-
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-4">
             <BookOpen className="w-5 h-5 text-white opacity-90" />
@@ -121,8 +151,6 @@ export function TeacherLoginPage() {
             Manage classrooms, create student accounts, and track learning
             progress — all in one place.
           </p>
-
-          {/* Illustration */}
           <div className="mt-6 flex justify-center">
             <img
               src="/assets/generated/login-communication-illustration.dim_600x700.png"
@@ -131,7 +159,6 @@ export function TeacherLoginPage() {
               style={{ maxHeight: "280px" }}
             />
           </div>
-
           <div className="mt-4 flex gap-4">
             {[
               { label: "Schools", value: "200+" },
@@ -153,7 +180,6 @@ export function TeacherLoginPage() {
             ))}
           </div>
         </div>
-
         <div className="relative z-10">
           <p className="text-xs text-white/50">
             © {new Date().getFullYear()} Classio Connect
@@ -161,7 +187,6 @@ export function TeacherLoginPage() {
         </div>
       </motion.div>
 
-      {/* RIGHT TILE — White background */}
       <motion.div
         initial={{ opacity: 0, x: 40 }}
         animate={{ opacity: 1, x: 0 }}
@@ -177,7 +202,6 @@ export function TeacherLoginPage() {
             <ArrowLeft className="w-4 h-4" />
             Back to Portal
           </Link>
-
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -195,9 +219,17 @@ export function TeacherLoginPage() {
                 data-ocid="teacher_login.error_state"
                 initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mb-5 flex items-start gap-3 rounded-lg px-4 py-3 text-sm bg-red-50 border border-red-200 text-red-700"
+                className={`mb-5 flex items-start gap-3 rounded-lg px-4 py-3 text-sm border ${
+                  waitingForActor
+                    ? "bg-blue-50 border-blue-200 text-blue-700"
+                    : "bg-red-50 border-red-200 text-red-700"
+                }`}
               >
-                <span className="mt-0.5">⚠</span>
+                {waitingForActor ? (
+                  <Loader2 className="h-4 w-4 animate-spin mt-0.5 shrink-0" />
+                ) : (
+                  <span className="mt-0.5">⚠</span>
+                )}
                 <span>{loginError}</span>
               </motion.div>
             )}
@@ -225,7 +257,6 @@ export function TeacherLoginPage() {
                   </p>
                 )}
               </div>
-
               <div className="space-y-1.5">
                 <Label htmlFor="teacher-email" className="text-gray-700">
                   Email Address <span className="text-red-500">*</span>
@@ -248,29 +279,29 @@ export function TeacherLoginPage() {
                   </p>
                 )}
               </div>
-
               <Button
                 data-ocid="teacher.submit_button"
                 type="submit"
-                disabled={isLoading || isFetching}
+                disabled={isLoading || isFetching || waitingForActor}
                 className="w-full font-semibold h-11 mt-2 text-white"
                 style={{
                   background:
                     "linear-gradient(135deg, #6366f1 0%, #7c3aed 100%)",
                 }}
               >
-                {isLoading ? (
+                {isLoading || waitingForActor ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : null}
-                {isFetching
+                {waitingForActor
                   ? "Connecting..."
-                  : isLoading
-                    ? "Verifying..."
-                    : "Sign In as Teacher"}
+                  : isFetching
+                    ? "Connecting..."
+                    : isLoading
+                      ? "Verifying..."
+                      : "Sign In as Teacher"}
               </Button>
             </form>
           </motion.div>
-
           <p className="mt-8 text-center text-xs text-gray-400">
             © {new Date().getFullYear()}. Built with love using{" "}
             <a

@@ -1,28 +1,31 @@
 # Classio Connect
 
 ## Current State
-Single LoginPage at `/` with 3 role tabs (Student/Teacher/Admin) in one card. Login errors shown only via toast notifications. Routes: `/admin`, `/teacher`, `/student` for dashboards.
+- ConversationModule uses emoji (🦩) as the AI character avatar
+- Login pages exist but may have issues with actor connection causing login failures
+- Report card exists but may lack graphical charts/details
+- All three login flows (student/teacher/admin) are implemented
 
 ## Requested Changes (Diff)
 
 ### Add
-- `StudentLoginPage` at `/login/student` — 2-tile split-screen layout (left: branded panel with logo/tagline/visuals, right: login form with inline error messages)
-- `TeacherLoginPage` at `/login/teacher` — same 2-tile split-screen layout
-- `AdminLoginPage` at `/login/admin` — same 2-tile split-screen layout
-- Role selection landing page at `/` — a professional portal selector with 3 cards (Student, Teacher, Admin) that routes to respective login pages
-- Inline error display below each field (red error text) in addition to/instead of only toast on wrong credentials
+- Animated human character selector in ConversationModule (Boy, Girl, Teacher) with CSS/SVG animation — full-body human avatar rendered in React (no emoji)
+- Character speaks visually: avatar has a speaking animation when AI responds
+- Report card: add bar charts and pie/radial charts using recharts showing scores per module, accuracy %, and performance breakdown
+- Detailed report card: show per-module score, total questions, accuracy %, performance remark, date
 
 ### Modify
-- `App.tsx` — add routes for `/login/student`, `/login/teacher`, `/login/admin`; keep `/` as the role selection page; keep dashboard routes
-- Login error handling — show inline error messages (e.g., "Invalid credentials" under the form) with a red alert box, not just toast
+- ConversationModule: replace 🦩 emoji with selectable animated human character (boy/girl/teacher SVG avatars with wave/speak animations)
+- Login pages: ensure actor connection is robust — add retry logic and clearer loading state so login doesn't fail silently when actor isn't ready
+- StudentDashboard report section: add recharts BarChart and RadialBarChart visualizations
+- TeacherDashboard reports tab: same graphical enhancements
 
 ### Remove
-- Old single `LoginPage` with tabs (replace entirely)
+- Nothing removed
 
 ## Implementation Plan
-1. Create `RoleSelectPage.tsx` at `/` — 3 large clickable cards for Student / Teacher / Admin, each linking to the respective login page
-2. Create `StudentLoginPage.tsx` — 2-tile: left tile branded with logo + motivational tagline + decorative element; right tile has School Name, Student Name, Mobile Number fields with inline validation errors
-3. Create `TeacherLoginPage.tsx` — 2-tile: left branded; right tile has Teacher ID + Email with inline errors
-4. Create `AdminLoginPage.tsx` — 2-tile: left branded; right tile has Email + Password with inline errors
-5. Update `App.tsx` — register all 4 new routes, remove old LoginPage import
-6. Each login page: on wrong credentials show a red alert box inside the form (not just toast), mobile-responsive (stack tiles vertically on small screens)
+1. Create AnimatedCharacter component with SVG human avatars (boy/girl/teacher), speaking animation using CSS keyframes
+2. Update ConversationModule to show character selector at start and display animated character during chat
+3. Update StudentDashboard report section with recharts charts (BarChart for module scores, RadialBarChart for overall accuracy)
+4. Update TeacherDashboard reports with same chart approach
+5. Fix login: add actor readiness check with better UX — show spinner while connecting, auto-retry on actor load
