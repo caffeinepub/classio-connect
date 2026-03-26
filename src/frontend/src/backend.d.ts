@@ -1,0 +1,94 @@
+import type { Principal } from "@icp-sdk/core/principal";
+export interface Some<T> {
+    __kind__: "Some";
+    value: T;
+}
+export interface None {
+    __kind__: "None";
+}
+export type Option<T> = Some<T> | None;
+export interface http_request_result {
+    status: bigint;
+    body: Uint8Array;
+    headers: Array<http_header>;
+}
+export interface TransformationOutput {
+    status: bigint;
+    body: Uint8Array;
+    headers: Array<http_header>;
+}
+export type Time = bigint;
+export interface TransformationInput {
+    context: Uint8Array;
+    response: http_request_result;
+}
+export interface Lesson {
+    id: bigint;
+    title: string;
+    description: string;
+    level: CourseLevel;
+    lessonType: LessonType;
+    ageGroup: AgeGroup;
+}
+export interface StreakTracking {
+    longestStreak: bigint;
+    lastActive: Time;
+    currentStreak: bigint;
+}
+export interface LessonCompletion {
+    lessonId: bigint;
+    completedAt: Time;
+    score: bigint;
+}
+export interface UserProfile {
+    courseLevel: CourseLevel;
+    displayName: string;
+    ageGroup: AgeGroup;
+}
+export interface http_header {
+    value: string;
+    name: string;
+}
+export enum AgeGroup {
+    teens = "teens",
+    kids = "kids",
+    adults = "adults"
+}
+export enum CourseLevel {
+    intermediate = "intermediate",
+    beginner = "beginner",
+    advanced = "advanced"
+}
+export enum LessonType {
+    conversation = "conversation",
+    grammar = "grammar",
+    pronunciation = "pronunciation",
+    vocabulary = "vocabulary"
+}
+export enum UserRole {
+    admin = "admin",
+    user = "user",
+    guest = "guest"
+}
+export interface backendInterface {
+    assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    createLesson(lesson: Lesson): Promise<bigint>;
+    deleteLesson(lessonId: bigint): Promise<boolean>;
+    endChatSession(sessionId: bigint): Promise<boolean>;
+    getAllCourses(): Promise<Array<Lesson>>;
+    getAllStreaks(): Promise<Array<StreakTracking>>;
+    getAllStreaksByLongest(): Promise<Array<StreakTracking>>;
+    getCallerUserProfile(): Promise<UserProfile | null>;
+    getCallerUserRole(): Promise<UserRole>;
+    getCoursesByAgeLevel(ageGroup: AgeGroup, level: CourseLevel): Promise<Array<Lesson>>;
+    getUserLessonCompletions(): Promise<Array<LessonCompletion>>;
+    getUserProfile(user: Principal): Promise<UserProfile | null>;
+    getUserStreak(): Promise<StreakTracking>;
+    isCallerAdmin(): Promise<boolean>;
+    markLessonComplete(lessonId: bigint, score: bigint): Promise<void>;
+    saveCallerUserProfile(profile: UserProfile): Promise<void>;
+    sendMessageToTutor(sessionId: bigint, message: string): Promise<string>;
+    startChatSession(): Promise<bigint>;
+    transform(input: TransformationInput): Promise<TransformationOutput>;
+    updateLesson(lessonId: bigint, lesson: Lesson): Promise<boolean>;
+}
