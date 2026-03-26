@@ -1,9 +1,18 @@
+import { ContentDiscoveryModule } from "@/components/modules/ContentDiscoveryModule";
 import { ConversationModule } from "@/components/modules/ConversationModule";
+import { DailySpeakingStreakModule } from "@/components/modules/DailySpeakingStreakModule";
+import { FillConversationModule } from "@/components/modules/FillConversationModule";
 import { GrammarModule } from "@/components/modules/GrammarModule";
 import { ListeningModule } from "@/components/modules/ListeningModule";
+import { PictureBasedSpeakingModule } from "@/components/modules/PictureBasedSpeakingModule";
 import { PronunciationModule } from "@/components/modules/PronunciationModule";
 import { ReadingModule } from "@/components/modules/ReadingModule";
+import { RoleplayModule } from "@/components/modules/RoleplayModule";
+import { ShadowingModule } from "@/components/modules/ShadowingModule";
+import { TimedSpeakingModule } from "@/components/modules/TimedSpeakingModule";
 import { VocabularyModule } from "@/components/modules/VocabularyModule";
+import { WeeklyVoiceJournalModule } from "@/components/modules/WeeklyVoiceJournalModule";
+import { WordOfTheDayModule } from "@/components/modules/WordOfTheDayModule";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "@tanstack/react-router";
@@ -67,47 +76,133 @@ type LocalReport = {
 const MODULES: Module[] = [
   {
     name: "Vocabulary Builder",
-    icon: "📚",
+    icon: "/assets/generated/module-vocabulary-transparent.dim_200x200.png",
     description: "Expand your word bank with 500+ essential English words",
     totalLessons: 10,
     level: "Beginner",
   },
   {
     name: "Grammar Essentials",
-    icon: "✏️",
+    icon: "/assets/generated/module-grammar-transparent.dim_200x200.png",
     description: "Master tenses, articles, and sentence structures",
     totalLessons: 2,
     level: "Intermediate",
   },
   {
     name: "Pronunciation Practice",
-    icon: "🎤",
+    icon: "/assets/generated/module-pronunciation-transparent.dim_200x200.png",
     description: "Sound like a native with phonetics and stress patterns",
     totalLessons: 2,
     level: "Beginner",
   },
   {
     name: "Listening Skills",
-    icon: "🎧",
+    icon: "/assets/generated/module-listening-transparent.dim_200x200.png",
     description: "Understand accents and improve comprehension",
     totalLessons: 2,
     level: "Intermediate",
   },
   {
     name: "Conversation Practice",
-    icon: "💬",
+    icon: "/assets/generated/module-conversation-transparent.dim_200x200.png",
     description: "Real-world dialogues and speaking confidence with AI",
     totalLessons: 2,
     level: "Advanced",
   },
   {
     name: "Reading Comprehension",
-    icon: "📖",
+    icon: "/assets/generated/module-reading-transparent.dim_200x200.png",
     description: "Articles, stories, and critical reading strategies",
     totalLessons: 2,
     level: "Intermediate",
   },
+  {
+    name: "Shadowing Practice",
+    icon: "/assets/generated/module-shadowing-transparent.dim_200x200.png",
+    description: "Mimic native speakers to perfect your accent and rhythm",
+    totalLessons: 5,
+    level: "Intermediate",
+  },
+  {
+    name: "AI Roleplay",
+    icon: "/assets/generated/module-roleplay-transparent.dim_200x200.png",
+    description: "Practice real conversations in structured scenarios with AI",
+    totalLessons: 5,
+    level: "Advanced",
+  },
+  {
+    name: "Picture Speaking",
+    icon: "/assets/generated/module-picture-speaking-transparent.dim_200x200.png",
+    description:
+      "Describe real-world scenes to build vocabulary and speaking confidence",
+    totalLessons: 5,
+    level: "Intermediate",
+  },
+  {
+    name: "Fill-in-the-Conversation",
+    icon: "/assets/generated/module-fill-conversation-transparent.dim_200x200.png",
+    description:
+      "Record missing lines in real dialogues and hear your voice in context",
+    totalLessons: 5,
+    level: "Intermediate",
+  },
+  {
+    name: "Daily Speaking Streak",
+    icon: "/assets/generated/module-daily-streak-transparent.dim_200x200.png",
+    description: "Build a daily habit with one speaking challenge every day",
+    totalLessons: 5,
+    level: "Beginner",
+  },
+  {
+    name: "Timed Speaking Challenge",
+    icon: "/assets/generated/module-timed-speaking-transparent.dim_200x200.png",
+    description:
+      "Speak for 30 seconds on a topic and track your fluency growth",
+    totalLessons: 5,
+    level: "Intermediate",
+  },
+  {
+    name: "Word of the Day",
+    icon: "/assets/generated/module-word-of-day-transparent.dim_200x200.png",
+    description: "Learn one new word daily and use it in your own sentence",
+    totalLessons: 5,
+    level: "Beginner",
+  },
+  {
+    name: "Weekly Voice Journal",
+    icon: "/assets/generated/module-voice-journal-transparent.dim_200x200.png",
+    description:
+      "Record a 1-minute free talk every week and hear your progress",
+    totalLessons: 5,
+    level: "Advanced",
+  },
+  {
+    name: "AI Content Discovery",
+    icon: "/assets/generated/module-ai-discovery-transparent.dim_200x200.png",
+    description:
+      "Semantic search across 500+ learning resources powered by NVIDIA NV-Embed-v2",
+    totalLessons: 5,
+    level: "Advanced",
+  },
 ];
+
+const MODULE_GLOW: Record<string, string> = {
+  "Vocabulary Builder": "drop-shadow(0 0 10px rgba(6,182,212,0.7))",
+  "Grammar Essentials": "drop-shadow(0 0 10px rgba(139,92,246,0.7))",
+  "Pronunciation Practice": "drop-shadow(0 0 10px rgba(249,115,22,0.7))",
+  "Listening Skills": "drop-shadow(0 0 10px rgba(59,130,246,0.7))",
+  "Conversation Practice": "drop-shadow(0 0 10px rgba(34,197,94,0.7))",
+  "Reading Comprehension": "drop-shadow(0 0 10px rgba(99,102,241,0.7))",
+  "Shadowing Practice": "drop-shadow(0 0 10px rgba(234,179,8,0.7))",
+  "AI Roleplay": "drop-shadow(0 0 10px rgba(239,68,68,0.7))",
+  "Picture Speaking": "drop-shadow(0 0 10px rgba(16,185,129,0.7))",
+  "Fill-in-the-Conversation": "drop-shadow(0 0 10px rgba(20,184,166,0.7))",
+  "Daily Speaking Streak": "drop-shadow(0 0 10px rgba(249,115,22,0.8))",
+  "Timed Speaking Challenge": "drop-shadow(0 0 10px rgba(244,63,94,0.7))",
+  "Word of the Day": "drop-shadow(0 0 10px rgba(234,179,8,0.8))",
+  "Weekly Voice Journal": "drop-shadow(0 0 10px rgba(99,102,241,0.7))",
+  "AI Content Discovery": "drop-shadow(0 0 12px rgba(124,58,237,0.8))",
+};
 
 function generateRemark(moduleName: string, score: number): string {
   if (score >= 90)
@@ -172,7 +267,6 @@ export function StudentDashboard() {
         setStudent(s);
         const sid = String(s.id);
 
-        // Per-student progress
         const storedProgress = localStorage.getItem(
           `classio_student_progress_${sid}`,
         );
@@ -192,7 +286,6 @@ export function StudentDashboard() {
         const g = localStorage.getItem(`classio_grade_${sid}`);
         if (g) setAssignedGrade(Number(g));
 
-        // Load reports
         const savedReports = localStorage.getItem(`classio_reports_${sid}`);
         if (savedReports) {
           try {
@@ -215,7 +308,6 @@ export function StudentDashboard() {
 
   const openModule = (module: Module) => {
     const currentLesson = moduleProgress[module.name] ?? 0;
-    // If no progress yet for this student, start at their assigned grade level
     const grade = assignedGrade ?? 1;
     const base =
       currentLesson > 0
@@ -233,7 +325,6 @@ export function StudentDashboard() {
     const percent = total > 0 ? Math.round((score / total) * 100) : 0;
     const remark = generateRemark(module.name, percent);
 
-    // Get student id from state or localStorage fallback
     const sid = student
       ? String(student.id)
       : (() => {
@@ -245,7 +336,6 @@ export function StudentDashboard() {
           }
         })();
 
-    // Save to backend (only if student loaded)
     if (student && actor) {
       (actor as any)
         .saveActivityReport(
@@ -258,7 +348,6 @@ export function StudentDashboard() {
         .catch(() => {});
     }
 
-    // Save to localStorage (always runs)
     if (sid) {
       const newReport: LocalReport = {
         moduleName: module.name,
@@ -282,7 +371,6 @@ export function StudentDashboard() {
       setReports(updated);
     }
 
-    // Adaptive lesson advancement based on performance
     let nextLesson: number;
     const minLesson = assignedGrade ?? 1;
     if (percent >= 80) {
@@ -378,10 +466,11 @@ export function StudentDashboard() {
       ? Math.round(reports.reduce((a, r) => a + r.percent, 0) / reports.length)
       : null;
 
-  // Module lesson view
   if (activeModuleLesson) {
     const { module, lesson } = activeModuleLesson;
     const progressPct = Math.round((lesson / module.totalLessons) * 100);
+    const glowFilter =
+      MODULE_GLOW[module.name] ?? "drop-shadow(0 0 8px rgba(99,102,241,0.6))";
 
     const renderModule = () => {
       const props = { lesson, onComplete: handleModuleComplete };
@@ -398,6 +487,28 @@ export function StudentDashboard() {
           return <ConversationModule {...props} />;
         case "Reading Comprehension":
           return <ReadingModule {...props} />;
+        case "Shadowing Practice":
+          return <ShadowingModule {...props} grade={assignedGrade ?? 1} />;
+        case "AI Roleplay":
+          return <RoleplayModule {...props} grade={assignedGrade ?? 1} />;
+        case "Picture Speaking":
+          return <PictureBasedSpeakingModule {...props} />;
+        case "Fill-in-the-Conversation":
+          return (
+            <FillConversationModule {...props} grade={assignedGrade ?? 1} />
+          );
+        case "Daily Speaking Streak":
+          return (
+            <DailySpeakingStreakModule {...props} grade={assignedGrade ?? 1} />
+          );
+        case "Timed Speaking Challenge":
+          return <TimedSpeakingModule {...props} grade={assignedGrade ?? 1} />;
+        case "Word of the Day":
+          return <WordOfTheDayModule {...props} grade={assignedGrade ?? 1} />;
+        case "Weekly Voice Journal":
+          return <WeeklyVoiceJournalModule onComplete={handleModuleComplete} />;
+        case "AI Content Discovery":
+          return <ContentDiscoveryModule onComplete={handleModuleComplete} />;
         default:
           return null;
       }
@@ -435,7 +546,12 @@ export function StudentDashboard() {
             className="space-y-6"
           >
             <div className="flex items-center gap-3 mb-2">
-              <span className="text-3xl">{module.icon}</span>
+              <img
+                src={module.icon}
+                alt={module.name}
+                className="w-12 h-12 object-contain rounded-lg"
+                style={{ filter: glowFilter }}
+              />
               <div>
                 <h1 className="text-xl font-bold">{module.name}</h1>
                 <p className="text-sm text-muted-foreground">Lesson {lesson}</p>
@@ -542,6 +658,7 @@ export function StudentDashboard() {
             const isStarted = pct > 0;
             const isCompleted = pct === 100;
             const hasReport = reports.find((r) => r.moduleName === module.name);
+            const isNvidia = module.name === "AI Content Discovery";
             return (
               <motion.div
                 key={module.name}
@@ -549,13 +666,32 @@ export function StudentDashboard() {
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.07 }}
-                className="rounded-2xl p-5 flex flex-col gap-4 bg-white border border-border shadow-sm hover:shadow-md transition-shadow"
+                className={`rounded-2xl p-5 flex flex-col gap-4 border shadow-sm hover:shadow-md transition-shadow ${
+                  isNvidia
+                    ? "bg-gradient-to-br from-violet-50 to-purple-50 border-violet-200"
+                    : "bg-white border-border"
+                }`}
               >
                 <div className="flex items-start justify-between">
-                  <span className="text-4xl">{module.icon}</span>
-                  <Badge className={`text-xs ${getLevelColor(module.level)}`}>
-                    {module.level}
-                  </Badge>
+                  <img
+                    src={module.icon}
+                    alt={module.name}
+                    className="w-16 h-16 object-contain rounded-xl"
+                    style={{ filter: MODULE_GLOW[module.name] }}
+                  />
+                  <div className="flex flex-col items-end gap-1">
+                    <Badge className={`text-xs ${getLevelColor(module.level)}`}>
+                      {module.level}
+                    </Badge>
+                    {isNvidia && (
+                      <span
+                        className="text-[10px] px-1.5 py-0.5 rounded-full font-bold text-white"
+                        style={{ background: "#76b900" }}
+                      >
+                        NVIDIA
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold text-base mb-1">
@@ -579,7 +715,11 @@ export function StudentDashboard() {
                     </span>
                     <span
                       className={
-                        pct === 100 ? "text-green-600" : "text-primary"
+                        pct === 100
+                          ? "text-green-600"
+                          : isNvidia
+                            ? "text-violet-600"
+                            : "text-primary"
                       }
                     >
                       {pct}%
@@ -590,7 +730,9 @@ export function StudentDashboard() {
                       initial={{ width: 0 }}
                       animate={{ width: `${pct}%` }}
                       transition={{ duration: 0.8, delay: i * 0.07 + 0.3 }}
-                      className="bg-primary h-1.5 rounded-full"
+                      className={`h-1.5 rounded-full ${
+                        isNvidia ? "bg-violet-500" : "bg-primary"
+                      }`}
                     />
                   </div>
                 </div>
@@ -601,14 +743,16 @@ export function StudentDashboard() {
                   className={
                     isCompleted
                       ? "w-full bg-green-100 text-green-700 border border-green-300 hover:bg-green-200"
-                      : "w-full gradient-cyan text-primary-foreground"
+                      : isNvidia
+                        ? "w-full bg-violet-600 hover:bg-violet-700 text-white"
+                        : "w-full gradient-cyan text-primary-foreground"
                   }
                 >
                   {isCompleted
                     ? "✓ Completed"
                     : isStarted
                       ? "Continue"
-                      : "Start"}
+                      : "Explore"}
                 </Button>
               </motion.div>
             );
@@ -653,7 +797,6 @@ export function StudentDashboard() {
               </div>
             )}
 
-            {/* Bar Chart */}
             <div className="rounded-2xl border border-border bg-white p-6">
               <h3 className="font-semibold text-sm text-gray-700 mb-4">
                 📈 Score by Module
@@ -700,7 +843,6 @@ export function StudentDashboard() {
               </ResponsiveContainer>
             </div>
 
-            {/* Pie Chart */}
             {reports.length > 1 && (
               <div className="rounded-2xl border border-border bg-white p-6">
                 <h3 className="font-semibold text-sm text-gray-700 mb-4">
@@ -778,7 +920,16 @@ export function StudentDashboard() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-2xl">{mod?.icon ?? "📚"}</span>
+                        {mod ? (
+                          <img
+                            src={mod.icon}
+                            alt={mod.name}
+                            className="w-8 h-8 object-contain rounded-lg"
+                            style={{ filter: MODULE_GLOW[mod.name] }}
+                          />
+                        ) : (
+                          <span className="text-2xl">📚</span>
+                        )}
                         <span className="font-semibold text-sm">
                           {report.moduleName}
                         </span>
@@ -829,7 +980,6 @@ export function StudentDashboard() {
         </div>
       </main>
 
-      {/* Lexi floating button */}
       <motion.button
         type="button"
         data-ocid="student.ai_tutor.open_modal_button"
@@ -842,7 +992,6 @@ export function StudentDashboard() {
         🦩
       </motion.button>
 
-      {/* Lexi Chat */}
       <AnimatePresence>
         {chatOpen && (
           <motion.div
