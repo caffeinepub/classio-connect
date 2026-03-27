@@ -200,12 +200,12 @@ function generateRemark(moduleName: string, score: number): string {
 }
 
 const LEXI_RESPONSES = [
-  "Great question! Keep practicing and you'll improve every day! 🌟",
+  "Great question! Keep practicing and you'll improve every day!",
   "Remember: the best way to learn English is to use it every day. Even 15 minutes helps!",
-  "Try reading English books or watching English movies with subtitles - it really works! 📺",
+  "Try reading English books or watching English movies with subtitles - it really works!",
   "Don't be afraid to make mistakes. Every mistake is a stepping stone to fluency!",
   "Tip: Keep a vocabulary journal and add 5 new words every day. Review them weekly!",
-  "Practice speaking aloud, even when alone. Your confidence will grow quickly! 💪",
+  "Practice speaking aloud, even when alone. Your confidence will grow quickly!",
   "Listening to English podcasts during commutes is a fantastic way to improve!",
   "Try thinking in English instead of translating from your native language.",
 ];
@@ -232,7 +232,7 @@ export function StudentDashboard() {
     {
       id: "init",
       role: "lexi",
-      text: "Hi there! I'm Lexi 🦩 Your English learning companion! Ask me anything about English or learning tips!",
+      text: "Hi there! I'm Lexi. Your English learning companion! Ask me anything about English or learning tips!",
     },
   ]);
   const [chatInput, setChatInput] = useState("");
@@ -326,115 +326,124 @@ export function StudentDashboard() {
     async (score: number, total: number) => {
       if (!activeModuleLessonRef.current) return;
       const { module, lesson } = activeModuleLessonRef.current;
-      const percent = total > 0 ? Math.round((score / total) * 100) : 0;
-      const remark = generateRemark(module.name, percent);
+      try {
+        const safeScore = Math.round(score);
+        const safeTotal = Math.round(total);
+        const percent =
+          safeTotal > 0 ? Math.round((safeScore / safeTotal) * 100) : 0;
+        const remark = generateRemark(module.name, percent);
 
-      const sid = student
-        ? String(student.id)
-        : (() => {
-            try {
-              const s = localStorage.getItem("classio_student");
-              return s ? String(JSON.parse(s).id) : "";
-            } catch {
-              return "";
-            }
-          })();
+        const sid = student
+          ? String(student.id)
+          : (() => {
+              try {
+                const s = localStorage.getItem("classio_student");
+                return s ? String(JSON.parse(s).id) : "";
+              } catch {
+                return "";
+              }
+            })();
 
-      if (student && actor) {
-        (actor as any)
-          .saveActivityReport(
-            BigInt(String(student.id)),
-            module.name,
-            BigInt(score),
-            BigInt(total),
+        if (student && actor) {
+          try {
+            (actor as any)
+              .saveActivityReport(
+                BigInt(String(student.id)),
+                module.name,
+                BigInt(safeScore),
+                BigInt(safeTotal),
+                remark,
+              )
+              .catch(() => {});
+          } catch {}
+        }
+
+        if (sid) {
+          const newReport: LocalReport = {
+            moduleName: module.name,
+            score: percent,
+            total: safeTotal,
+            percent,
             remark,
-          )
-          .catch(() => {});
+            completedAt: new Date().toLocaleDateString(),
+          };
+          const key = `classio_reports_${sid}`;
+          const existing = localStorage.getItem(key);
+          let existing_reports: LocalReport[] = [];
+          try {
+            existing_reports = existing ? JSON.parse(existing) : [];
+          } catch {}
+          const filtered = existing_reports.filter(
+            (r) => r.moduleName !== module.name,
+          );
+          const updated = [...filtered, newReport];
+          localStorage.setItem(key, JSON.stringify(updated));
+          setReports(updated);
+        }
+
+        let nextLesson: number;
+        const minLesson = assignedGrade ?? 1;
+        if (percent >= 80) {
+          nextLesson = Math.min(lesson + 1, module.totalLessons);
+          toast.success(
+            `${module.name} completed! Score: ${percent}% Moving to a harder lesson!`,
+          );
+        } else if (percent < 50) {
+          nextLesson = Math.max(lesson - 1, minLesson, 1);
+          toast.info(
+            `Score: ${percent}%. Let's try this lesson again for more practice.`,
+          );
+        } else {
+          nextLesson = Math.min(lesson, module.totalLessons);
+          toast.success(`${module.name} completed! Score: ${percent}%`);
+        }
+
+        const newProgress = { ...moduleProgress, [module.name]: nextLesson };
+        setModuleProgress(newProgress);
+
+        if (sid) {
+          localStorage.setItem(
+            `classio_mod_${sid}_${module.name}`,
+            String(nextLesson),
+          );
+
+          const progressData: StudentProgress = {
+            currentModule: module.name,
+            currentLesson: nextLesson,
+          };
+          setSavedProgress(progressData);
+          localStorage.setItem(
+            `classio_student_progress_${sid}`,
+            JSON.stringify(progressData),
+          );
+        }
+
+        if (student && actor) {
+          try {
+            actor
+              .updateStudentProgress(
+                BigInt(String(student.id)),
+                module.name,
+                BigInt(nextLesson),
+              )
+              .catch(() => {});
+          } catch {}
+        }
+
+        if (sid) {
+          const newCompleted = {
+            ...completedLessons,
+            [module.name]: (completedLessons[module.name] ?? 0) + 1,
+          };
+          setCompletedLessons(newCompleted);
+          localStorage.setItem(
+            `classio_completed_${sid}_${module.name}`,
+            String(newCompleted[module.name]),
+          );
+        }
+      } finally {
+        setActiveModuleLesson(null);
       }
-
-      if (sid) {
-        const newReport: LocalReport = {
-          moduleName: module.name,
-          score: percent,
-          total,
-          percent,
-          remark,
-          completedAt: new Date().toLocaleDateString(),
-        };
-        const key = `classio_reports_${sid}`;
-        const existing = localStorage.getItem(key);
-        let existing_reports: LocalReport[] = [];
-        try {
-          existing_reports = existing ? JSON.parse(existing) : [];
-        } catch {}
-        const filtered = existing_reports.filter(
-          (r) => r.moduleName !== module.name,
-        );
-        const updated = [...filtered, newReport];
-        localStorage.setItem(key, JSON.stringify(updated));
-        setReports(updated);
-      }
-
-      let nextLesson: number;
-      const minLesson = assignedGrade ?? 1;
-      if (percent >= 80) {
-        nextLesson = Math.min(lesson + 1, module.totalLessons);
-        toast.success(
-          `${module.name} completed! Score: ${percent}% 🎉 Moving to a harder lesson!`,
-        );
-      } else if (percent < 50) {
-        nextLesson = Math.max(lesson - 1, minLesson, 1);
-        toast.info(
-          `Score: ${percent}%. Let's try this lesson again for more practice.`,
-        );
-      } else {
-        nextLesson = Math.min(lesson, module.totalLessons);
-        toast.success(`${module.name} completed! Score: ${percent}% 🎉`);
-      }
-
-      const newProgress = { ...moduleProgress, [module.name]: nextLesson };
-      setModuleProgress(newProgress);
-
-      if (sid) {
-        localStorage.setItem(
-          `classio_mod_${sid}_${module.name}`,
-          String(nextLesson),
-        );
-
-        const progressData: StudentProgress = {
-          currentModule: module.name,
-          currentLesson: nextLesson,
-        };
-        setSavedProgress(progressData);
-        localStorage.setItem(
-          `classio_student_progress_${sid}`,
-          JSON.stringify(progressData),
-        );
-      }
-
-      if (student && actor) {
-        actor
-          .updateStudentProgress(
-            BigInt(String(student.id)),
-            module.name,
-            BigInt(nextLesson),
-          )
-          .catch(() => {});
-      }
-
-      if (sid) {
-        const newCompleted = {
-          ...completedLessons,
-          [module.name]: (completedLessons[module.name] ?? 0) + 1,
-        };
-        setCompletedLessons(newCompleted);
-        localStorage.setItem(
-          `classio_completed_${sid}_${module.name}`,
-          String(newCompleted[module.name]),
-        );
-      }
-
-      setActiveModuleLesson(null);
     },
     [student, actor, moduleProgress, assignedGrade, completedLessons],
   );
@@ -672,7 +681,7 @@ export function StudentDashboard() {
           >
             <div>
               <p className="text-sm text-primary font-semibold">
-                👋 Welcome back, {student?.studentName}!
+                Welcome back, {student?.studentName}!
               </p>
               <p className="text-sm text-muted-foreground mt-0.5">
                 Resume from{" "}
@@ -851,7 +860,7 @@ export function StudentDashboard() {
                       }
                     >
                       {isCompleted
-                        ? "✓ Completed"
+                        ? "Completed"
                         : isStarted
                           ? "Continue"
                           : "Explore"}
@@ -871,9 +880,7 @@ export function StudentDashboard() {
               >
                 <div className="flex items-center gap-3">
                   <BarChart2 className="h-6 w-6 text-primary" />
-                  <h2 className="text-xl font-bold">
-                    📊 My Learning Report Card
-                  </h2>
+                  <h2 className="text-xl font-bold">My Learning Report Card</h2>
                 </div>
 
                 {avgScore !== null && (
@@ -903,7 +910,7 @@ export function StudentDashboard() {
 
                 <div className="rounded-2xl border border-border bg-white p-6">
                   <h3 className="font-semibold text-sm text-gray-700 mb-4">
-                    📈 Score by Module
+                    Score by Module
                   </h3>
                   <ResponsiveContainer width="100%" height={220}>
                     <BarChart
@@ -950,7 +957,7 @@ export function StudentDashboard() {
                 {reports.length > 1 && (
                   <div className="rounded-2xl border border-border bg-white p-6">
                     <h3 className="font-semibold text-sm text-gray-700 mb-4">
-                      🥧 Performance Distribution
+                      Performance Distribution
                     </h3>
                     <div className="flex flex-col sm:flex-row items-center gap-6">
                       <ResponsiveContainer width={200} height={200}>
@@ -991,13 +998,13 @@ export function StudentDashboard() {
                       <div className="flex flex-col gap-2 text-xs">
                         <div className="flex items-center gap-2">
                           <span className="w-3 h-3 rounded-full bg-green-500 inline-block" />{" "}
-                          Excellent ≥80%:{" "}
+                          Excellent 80%+:{" "}
                           {reports.filter((r) => r.percent >= 80).length}{" "}
                           modules
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="w-3 h-3 rounded-full bg-yellow-500 inline-block" />{" "}
-                          Good 50–79%:{" "}
+                          Good 50-79%:{" "}
                           {
                             reports.filter(
                               (r) => r.percent >= 50 && r.percent < 80,
@@ -1007,7 +1014,7 @@ export function StudentDashboard() {
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="w-3 h-3 rounded-full bg-red-500 inline-block" />{" "}
-                          Needs Work &lt;50%:{" "}
+                          Needs Work below 50%:{" "}
                           {reports.filter((r) => r.percent < 50).length} modules
                         </div>
                       </div>
@@ -1066,7 +1073,7 @@ export function StudentDashboard() {
                           {report.remark}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          📅 {report.completedAt}
+                          {report.completedAt}
                         </p>
                       </motion.div>
                     );
@@ -1078,7 +1085,7 @@ export function StudentDashboard() {
         )}
 
         <div className="mt-12 text-center text-xs text-muted-foreground">
-          © {new Date().getFullYear()}. Built with ❤️ using{" "}
+          © {new Date().getFullYear()}. Built with love using{" "}
           <a
             href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`}
             target="_blank"
