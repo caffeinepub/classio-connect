@@ -106,21 +106,54 @@ actor {
     completedAt : Time.Time;
   };
 
+  // ── Stable storage for upgrade persistence ──────────────────────────────
+  stable var stableTeachers : [(Nat, TeacherRecord)] = [];
+  stable var stableStudents : [(Nat, StudentRecord)] = [];
+  stable var stableStudentProgress : [(Nat, StudentProgress)] = [];
+  stable var stableActivityReports : [(Nat, ActivityReport)] = [];
+
+  stable var teacherIdCounter : Nat = 0;
+  stable var studentIdCounter : Nat = 0;
+  stable var reportIdCounter : Nat = 0;
+  stable var lessonIdCounter : Nat = 0;
+  stable var chatSessionIdCounter : Nat = 0;
+
+  // ── In-memory maps (rebuilt from stable arrays on upgrade) ───────────────
   let courses = Map.empty<Nat, Lesson>();
   let userProfiles = Map.empty<Principal, UserProfile>();
   let userLessonCompletions = Map.empty<Principal, List.List<LessonCompletion>>();
   let chatSessions = Map.empty<Nat, ChatSession>();
   let userStreaks = Map.empty<Principal, StreakTracking>();
-  var lessonIdCounter = 0;
-  var chatSessionIdCounter = 0;
 
   let teachers = Map.empty<Nat, TeacherRecord>();
   let students = Map.empty<Nat, StudentRecord>();
   let studentProgress = Map.empty<Nat, StudentProgress>();
   let activityReports = Map.empty<Nat, ActivityReport>();
-  var teacherIdCounter = 0;
-  var studentIdCounter = 0;
-  var reportIdCounter = 0;
+
+  // Restore persistent maps from stable arrays on first load / after upgrade
+  do {
+    for ((k, v) in stableTeachers.vals()) { teachers.add(k, v) };
+    for ((k, v) in stableStudents.vals()) { students.add(k, v) };
+    for ((k, v) in stableStudentProgress.vals()) { studentProgress.add(k, v) };
+    for ((k, v) in stableActivityReports.vals()) { activityReports.add(k, v) };
+  };
+
+  // ── Upgrade hooks ────────────────────────────────────────────────────────
+  system func preupgrade() {
+    stableTeachers := teachers.entries().toArray();
+    stableStudents := students.entries().toArray();
+    stableStudentProgress := studentProgress.entries().toArray();
+    stableActivityReports := activityReports.entries().toArray();
+  };
+
+  system func postupgrade() {
+    // Maps are already rebuilt in the initializer block above;
+    // clear stable arrays to avoid holding duplicate memory.
+    stableTeachers := [];
+    stableStudents := [];
+    stableStudentProgress := [];
+    stableActivityReports := [];
+  };
 
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);

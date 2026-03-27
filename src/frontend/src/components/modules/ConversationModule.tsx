@@ -10,7 +10,7 @@ import {
   type CharacterType,
 } from "@/components/AnimatedCharacter";
 import { Button } from "@/components/ui/button";
-import { Mic, MicOff, Send, Volume2, VolumeX } from "lucide-react";
+import { Lightbulb, Mic, MicOff, Send, Volume2, VolumeX } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -31,68 +31,174 @@ const SCENARIOS: Record<number, Scenario> = {
   },
 };
 
+// Grammar Correction
+type GrammarError = { wrong: string; correct: string };
+
+const GRAMMAR_RULES: { pattern: RegExp; wrong: string; correct: string }[] = [
+  { pattern: /\bi is\b/i, wrong: "I is", correct: "I am" },
+  { pattern: /\bhe go\b(?!es)/i, wrong: "he go", correct: "he goes" },
+  { pattern: /\bshe go\b(?!es)/i, wrong: "she go", correct: "she goes" },
+  { pattern: /\bthey goes\b/i, wrong: "they goes", correct: "they go" },
+  { pattern: /\bi goes\b/i, wrong: "I goes", correct: "I go" },
+  { pattern: /\bi were\b/i, wrong: "I were", correct: "I was" },
+  { pattern: /\byou was\b/i, wrong: "you was", correct: "you were" },
+  { pattern: /\bwe was\b/i, wrong: "we was", correct: "we were" },
+  { pattern: /\bthey was\b/i, wrong: "they was", correct: "they were" },
+  { pattern: /\bhe don't\b/i, wrong: "he don't", correct: "he doesn't" },
+  { pattern: /\bshe don't\b/i, wrong: "she don't", correct: "she doesn't" },
+  { pattern: /\bit don't\b/i, wrong: "it don't", correct: "it doesn't" },
+  { pattern: /\bi goed\b/i, wrong: "I goed", correct: "I went" },
+  { pattern: /\bi buyed\b/i, wrong: "I buyed", correct: "I bought" },
+  { pattern: /\bi thinked\b/i, wrong: "I thinked", correct: "I thought" },
+  { pattern: /\bmore better\b/i, wrong: "more better", correct: "better" },
+  { pattern: /\bmore faster\b/i, wrong: "more faster", correct: "faster" },
+  {
+    pattern: /\bcan able to\b/i,
+    wrong: "can able to",
+    correct: "can / is able to",
+  },
+  { pattern: /\bi have went\b/i, wrong: "I have went", correct: "I have gone" },
+  { pattern: /\bhe have\b/i, wrong: "He have", correct: "He has" },
+  { pattern: /\bshe have\b/i, wrong: "She have", correct: "She has" },
+];
+
+function detectGrammarError(text: string): GrammarError | null {
+  for (const rule of GRAMMAR_RULES) {
+    if (rule.pattern.test(text)) {
+      return { wrong: rule.wrong, correct: rule.correct };
+    }
+  }
+  if (/^i\s/i.test(text.trim()) && !/^I\s/.test(text.trim())) {
+    return {
+      wrong: "i (lowercase as subject)",
+      correct: "I (always capitalize)",
+    };
+  }
+  return null;
+}
+
+// Topic Detection & Adaptive Responses
+const TOPIC_RESPONSES: Record<string, string[]> = {
+  greetings: [
+    "Hello! Great to hear from you. How are you feeling today? Tell me in a full sentence!",
+    "Hi there! Lovely to chat. What is your name and where are you from?",
+    "Hey! Nice to meet you. Can you introduce yourself with two or three sentences?",
+  ],
+  school: [
+    "School sounds interesting! What is your favourite subject and why do you enjoy it?",
+    "That reminds me of my school days! Do you have any exams coming up? How do you prepare?",
+    "Homework can be challenging! Which subject do you find the hardest and which is the easiest?",
+    "Teachers play such an important role. Tell me about a teacher who has inspired you.",
+  ],
+  family: [
+    "Family is so important! How many people are in your family? Tell me about each of them.",
+    "That sounds lovely! Do you spend a lot of time with your family on weekends?",
+    "Home is where the heart is! What is your favourite thing to do with your family?",
+    "Brothers and sisters can be fun! Do you have any siblings? What are they like?",
+  ],
+  food: [
+    "Food is a wonderful topic! What is your all-time favourite dish and who cooks it best?",
+    "Yummy! Do you enjoy cooking? What is the easiest dish you can make yourself?",
+    "Every region has special food. What traditional food is popular in your area?",
+    "Breakfast is the most important meal! What did you have for breakfast today?",
+  ],
+  sports: [
+    "Sports are great for health! Do you play any sport regularly? Tell me more!",
+    "Exciting! Who is your favourite sports player and why do you admire them?",
+    "Team sports build teamwork. Have you ever played for a school team or a local club?",
+    "Watching matches is thrilling! What was the most exciting match you have ever watched?",
+  ],
+  weather: [
+    "The weather affects our mood so much! What kind of weather do you enjoy the most?",
+    "Rainy days can be cosy! What do you like to do when it rains outside?",
+    "Summer has its own charm! What activities do you enjoy during summer holidays?",
+    "Cold winters are wonderful! Do you experience snowfall in your area?",
+  ],
+  travel: [
+    "Travel broadens the mind! Have you visited any place that left a strong impression on you?",
+    "Wonderful! If you could travel anywhere in the world, where would you go and why?",
+    "Road trips can be so much fun! What is the most interesting trip you have been on?",
+    "Different countries, different cultures! What is one thing you would love to experience abroad?",
+  ],
+  hobbies: [
+    "Hobbies keep us creative! How long have you been practising your hobby and how did you start?",
+    "That sounds fun! Do you prefer indoor hobbies like reading or outdoor ones like sports?",
+    "Music is a universal language! Do you play any instrument or enjoy singing?",
+    "Drawing and art express our feelings. Have you ever created something you are really proud of?",
+  ],
+  feelings: [
+    "It is good to talk about feelings! Can you describe exactly how you are feeling and why?",
+    "Thank you for sharing. What usually cheers you up when you are feeling down?",
+    "Being excited is wonderful! What is making you feel that way? Tell me everything!",
+    "Feelings are natural. Try to use describing words — are you slightly, very, or extremely happy?",
+  ],
+  dreams: [
+    "Dreams and goals give us direction! What do you want to be when you grow up and why?",
+    "Fantastic ambition! What steps are you taking right now to reach that dream?",
+    "The future is bright! Where do you see yourself in ten years? Paint me a picture!",
+    "Every great career starts with a plan. What subjects are most important for your dream job?",
+  ],
+};
+
+const TOPIC_KEYWORDS: Record<string, RegExp> = {
+  greetings:
+    /\b(hi|hello|hey|good morning|good afternoon|good evening|nice to meet|my name is)\b/i,
+  school:
+    /\b(school|class|teacher|homework|subject|exam|study|college|university|lesson)\b/i,
+  family:
+    /\b(family|mother|father|sister|brother|parents|home|mom|dad|uncle|aunt|grandma|grandpa)\b/i,
+  food: /\b(eat|food|lunch|dinner|breakfast|rice|pizza|cook|hungry|meal|snack|drink)\b/i,
+  sports:
+    /\b(play|cricket|football|basketball|game|sport|team|match|run|swim|gym|exercise)\b/i,
+  weather:
+    /\b(weather|rain|sunny|cold|hot|summer|winter|spring|temperature|climate|wind|snow)\b/i,
+  travel:
+    /\b(travel|trip|visit|place|holiday|vacation|country|city|abroad|tour|journey)\b/i,
+  hobbies:
+    /\b(hobby|drawing|painting|reading|music|dance|sing|listen|collect|craft|write)\b/i,
+  feelings:
+    /\b(feel|feeling|happy|sad|tired|excited|nervous|bored|worried|angry|afraid|joy|stress)\b/i,
+  dreams:
+    /\b(dream|future|plan|career|become|goal|aspire|wish|ambition|job)\b/i,
+};
+
+const CHANGE_TOPIC_REGEX =
+  /\b(other topic|change topic|different topic|something else|let's talk about|talk about something|switch topic|another topic)\b/i;
+
+function detectTopic(msg: string): string | null {
+  for (const [topic, pattern] of Object.entries(TOPIC_KEYWORDS)) {
+    if (pattern.test(msg)) return topic;
+  }
+  return null;
+}
+
 function getLexiResponse(
   userMessage: string,
-  roleContext: string,
+  _roleContext: string,
   history: number,
 ): string {
   const msg = userMessage.toLowerCase().trim();
-  let correction = "";
-  if (/\bi is\b/i.test(userMessage))
-    correction = "(Tip: Use 'I am' instead of 'I is') ";
-  else if (/\bhe go\b/i.test(userMessage))
-    correction = "(Tip: Use 'he goes' with -es) ";
-  else if (/\bthey goes\b/i.test(userMessage))
-    correction = "(Tip: Use 'they go' without -s) ";
 
-  if (roleContext === "new_student") {
-    if (/(hi|hello|hey|good morning|good afternoon|good evening)/i.test(msg))
-      return `${correction}Hi there! I just joined this school. I'm a bit nervous. What's your name?`;
-    if (/(my name is|i am|i'm|call me)/i.test(msg))
-      return `${correction}What a lovely name! Nice to meet you! Which city or town are you from?`;
-    if (/(from|live in|city|town|village|state|country)/i.test(msg))
-      return `${correction}Oh wow, that sounds wonderful! What are your hobbies? Do you like sports or music?`;
-    if (
-      /(sport|music|read|play|dance|cricket|football|sing|draw|cook)/i.test(msg)
-    )
-      return `${correction}That's amazing! I love that too! Should we use formal or informal language with our teacher?`;
-    if (/(formal|informal|polite|sir|ma'am|respect)/i.test(msg))
-      return `${correction}Exactly right! Formal language is best with teachers and elders. Great thinking!`;
-    const fallbacks = [
-      `${correction}Interesting! Tell me more using a complete sentence — it helps with fluency!`,
-      `${correction}Great effort! Keep going — conversations improve with practice. What else would you like to share?`,
-      `${correction}Good job! Remember, in formal introductions say 'I am pleased to meet you'. Give it a try!`,
-    ];
-    return fallbacks[history % fallbacks.length];
+  if (CHANGE_TOPIC_REGEX.test(msg)) {
+    return "Sure! Which topic would you like to discuss? You can choose from school life, food, sports, travel, weather, hobbies, or anything you like!";
   }
 
-  if (roleContext === "lost_tourist") {
-    if (/(where|find|looking|lost|help|library|museum)/i.test(msg))
-      return `${correction}Oh thank goodness! I'm looking for the library. Do you know where it is?`;
-    if (
-      /(turn|go straight|left|right|ahead|cross|next to|opposite|past|walk)/i.test(
-        msg,
-      )
-    )
-      return `${correction}Perfect directions! That's very helpful! Is it far from here?`;
-    if (/(far|near|close|minute|block|kilometer)/i.test(msg))
-      return `${correction}Great, not too far! Thank you! Could you also tell me a landmark nearby?`;
-    if (/(landmark|bank|park|church|shop|store|bus)/i.test(msg))
-      return `${correction}Excellent! You're so helpful! Remember to use 'Excuse me' when asking strangers.`;
-    if (/(excuse me|sorry|pardon|please|thank)/i.test(msg))
-      return `${correction}Very polite! Using 'excuse me' and 'please' makes communication so much smoother!`;
-    const fallbacks = [
-      `${correction}Can you give me step-by-step directions? Try starting with 'Go straight and then...'`,
-      `${correction}Hmm, I'm not sure I follow. Try direction words like left, right, straight.`,
-      `${correction}Thanks for trying! Try phrases like 'turn left at the signal' or 'it is next to the park'.`,
-    ];
-    return fallbacks[history % fallbacks.length];
+  const topic = detectTopic(msg);
+  if (topic && TOPIC_RESPONSES[topic]) {
+    const responses = TOPIC_RESPONSES[topic];
+    return responses[history % responses.length];
   }
 
-  return `${correction}That's interesting! Keep practicing English every day.`;
+  return "That is interesting! Which topic would you like to explore? We can talk about school, family, hobbies, sports, travel, or anything on your mind!";
 }
 
-type ChatMsg = { id: string; role: "user" | "lexi"; text: string };
+// Types
+type ChatMsg = {
+  id: string;
+  role: "user" | "lexi" | "tip";
+  text: string;
+  tipData?: { wrong: string; correct: string };
+};
 
 interface Props {
   lesson: number;
@@ -108,6 +214,36 @@ const CHARACTER_OPTIONS: {
   { type: "girl", label: "Girl", color: "#a855f7" },
   { type: "teacher", label: "Teacher", color: "#1e40af" },
 ];
+
+// Classio Tip Card
+function ClassioTipCard({
+  wrong,
+  correct,
+}: { wrong: string; correct: string }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      className="mx-auto max-w-[90%] rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 flex gap-3 items-start shadow-sm"
+    >
+      <div className="mt-0.5 shrink-0 w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center">
+        <Lightbulb className="w-3.5 h-3.5 text-amber-500" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-bold text-amber-700 mb-1">Classio Tip</p>
+        <p className="text-xs text-amber-900 leading-relaxed">
+          You said:{" "}
+          <span className="font-semibold line-through opacity-70">{wrong}</span>
+          {" — Try: "}
+          <span className="font-semibold text-green-700">{correct}</span>
+        </p>
+        <p className="text-xs text-amber-600 mt-1 italic">
+          Great catch — small fixes make a big difference!
+        </p>
+      </div>
+    </motion.div>
+  );
+}
 
 export function ConversationModule({ lesson, onComplete }: Props) {
   const scenario = SCENARIOS[lesson] ?? SCENARIOS[1];
@@ -156,35 +292,36 @@ export function ConversationModule({ lesson, onComplete }: Props) {
 
   const startWithCharacter = (type: CharacterType) => {
     setSelectedCharacter(type);
-    const greeting = `Hi! I'm your English conversation partner! ${scenario.description} Start the conversation!`;
-    setMessages([
-      {
-        id: "init",
-        role: "lexi",
-        text: greeting,
-      },
-    ]);
+    const greeting =
+      "Hi! I am your English conversation partner. Let us talk! You can choose any topic — school, family, food, sports, travel, hobbies, or anything you like. What would you like to discuss today?";
+    setMessages([{ id: "init", role: "lexi", text: greeting }]);
     setTimeout(() => speakText(greeting), 300);
   };
 
   const sendText = (text: string) => {
     if (!text.trim()) return;
-    const userMsg: ChatMsg = {
-      id: `u-${Date.now()}`,
-      role: "user",
-      text: text.trim(),
-    };
+    const newMsgs: ChatMsg[] = [];
+
+    newMsgs.push({ id: `u-${Date.now()}`, role: "user", text: text.trim() });
+
+    const grammarError = detectGrammarError(text.trim());
+    if (grammarError) {
+      newMsgs.push({
+        id: `tip-${Date.now() + 1}`,
+        role: "tip",
+        text: "",
+        tipData: grammarError,
+      });
+    }
+
     const lexiText = getLexiResponse(
       text.trim(),
       scenario.roleContext,
       exchangeCount,
     );
-    const lexiMsg: ChatMsg = {
-      id: `l-${Date.now() + 1}`,
-      role: "lexi",
-      text: lexiText,
-    };
-    setMessages((p) => [...p, userMsg, lexiMsg]);
+    newMsgs.push({ id: `l-${Date.now() + 2}`, role: "lexi", text: lexiText });
+
+    setMessages((p) => [...p, ...newMsgs]);
     setExchangeCount((p) => p + 1);
     setInput("");
     speakText(lexiText);
@@ -206,34 +343,27 @@ export function ConversationModule({ lesson, onComplete }: Props) {
       );
       return;
     }
-
     if (isListening) {
       recognitionRef.current?.stop();
       setIsListening(false);
       return;
     }
-
     const recognition = new SR();
     recognition.lang = "en-US";
     recognition.continuous = false;
     recognition.interimResults = false;
-
     recognition.onresult = (e: any) => {
       const transcript = e.results[0][0].transcript;
       setInput(transcript);
-      // Auto-send after short delay so user can see the transcribed text
       setTimeout(() => sendText(transcript), 400);
     };
-
     recognition.onend = () => {
       setIsListening(false);
     };
-
     recognition.onerror = (e: any) => {
       console.warn("Speech recognition error:", e.error);
       setIsListening(false);
     };
-
     recognitionRef.current = recognition;
     recognition.start();
     setIsListening(true);
@@ -241,7 +371,6 @@ export function ConversationModule({ lesson, onComplete }: Props) {
 
   const score = Math.min(exchangeCount, 5);
 
-  // Character picker screen
   if (!selectedCharacter) {
     return (
       <motion.div
@@ -278,7 +407,7 @@ export function ConversationModule({ lesson, onComplete }: Props) {
           ))}
         </div>
         <p className="text-center text-xs text-muted-foreground">
-          Scenario: <span className="font-medium">{scenario.title}</span>
+          Adaptive conversation — talk about any topic you choose!
         </p>
       </motion.div>
     );
@@ -315,7 +444,6 @@ export function ConversationModule({ lesson, onComplete }: Props) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-[35%_65%] gap-4 min-h-0">
-        {/* Left: Character + scenario */}
         <div className="flex flex-col items-center gap-3">
           <div className="rounded-2xl bg-gradient-to-b from-cyan-50 to-blue-50 border border-cyan-200 p-4 w-full flex flex-col items-center gap-2 relative">
             <AnimatedCharacter
@@ -361,10 +489,11 @@ export function ConversationModule({ lesson, onComplete }: Props) {
 
           <div className="rounded-xl bg-white border border-border p-3 w-full">
             <p className="text-xs font-semibold text-cyan-800 mb-1">
-              {scenario.title}
+              Adaptive Conversation
             </p>
             <p className="text-xs text-gray-600 leading-relaxed">
-              {scenario.description}
+              Talk about any topic — school, family, sports, food, hobbies,
+              weather, travel, or anything you like!
             </p>
           </div>
 
@@ -401,48 +530,54 @@ export function ConversationModule({ lesson, onComplete }: Props) {
               {["d1", "d2", "d3", "d4", "d5"].map((dotId, dotIdx) => (
                 <div
                   key={dotId}
-                  className={`w-2 h-2 rounded-full transition-colors ${
-                    dotIdx < exchangeCount ? "bg-primary" : "bg-secondary"
-                  }`}
+                  className={`w-2 h-2 rounded-full transition-colors ${dotIdx < exchangeCount ? "bg-primary" : "bg-secondary"}`}
                 />
               ))}
             </div>
           </div>
         </div>
 
-        {/* Right: Chat */}
         <div className="flex flex-col border border-border rounded-2xl bg-white overflow-hidden">
           <div className="h-80 overflow-y-auto p-4 space-y-3">
             <AnimatePresence initial={false}>
-              {messages.map((msg) => (
-                <motion.div
-                  key={msg.id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={`flex gap-2 ${
-                    msg.role === "user" ? "flex-row-reverse" : "flex-row"
-                  }`}
-                >
-                  {msg.role === "lexi" && (
-                    <div className="shrink-0 w-7 h-7 rounded-full bg-cyan-100 flex items-center justify-center text-xs">
-                      {selectedCharacter === "boy"
-                        ? "B"
-                        : selectedCharacter === "girl"
-                          ? "G"
-                          : "T"}
-                    </div>
-                  )}
-                  <div
-                    className={`max-w-[80%] px-3 py-2 rounded-xl text-sm leading-relaxed ${
-                      msg.role === "user"
-                        ? "bg-primary text-primary-foreground rounded-br-sm"
-                        : "bg-cyan-50 text-cyan-900 border border-cyan-200 rounded-bl-sm"
-                    }`}
+              {messages.map((msg) => {
+                if (msg.role === "tip") {
+                  return (
+                    <ClassioTipCard
+                      key={msg.id}
+                      wrong={msg.tipData?.wrong ?? ""}
+                      correct={msg.tipData?.correct ?? ""}
+                    />
+                  );
+                }
+                return (
+                  <motion.div
+                    key={msg.id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`flex gap-2 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}
                   >
-                    {msg.text}
-                  </div>
-                </motion.div>
-              ))}
+                    {msg.role === "lexi" && (
+                      <div className="shrink-0 w-7 h-7 rounded-full bg-cyan-100 flex items-center justify-center text-xs">
+                        {selectedCharacter === "boy"
+                          ? "B"
+                          : selectedCharacter === "girl"
+                            ? "G"
+                            : "T"}
+                      </div>
+                    )}
+                    <div
+                      className={`max-w-[80%] px-3 py-2 rounded-xl text-sm leading-relaxed ${
+                        msg.role === "user"
+                          ? "bg-primary text-primary-foreground rounded-br-sm"
+                          : "bg-cyan-50 text-cyan-900 border border-cyan-200 rounded-bl-sm"
+                      }`}
+                    >
+                      {msg.text}
+                    </div>
+                  </motion.div>
+                );
+              })}
             </AnimatePresence>
             <div ref={bottomRef} />
           </div>
@@ -465,11 +600,7 @@ export function ConversationModule({ lesson, onComplete }: Props) {
               data-ocid="conversation.mic.button"
               onClick={toggleVoice}
               title={isListening ? "Stop listening" : "Speak your message"}
-              className={`p-2 rounded-lg transition-colors ${
-                isListening
-                  ? "animate-pulse bg-red-500 text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
+              className={`p-2 rounded-lg transition-colors ${isListening ? "animate-pulse bg-red-500 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
             >
               {isListening ? (
                 <MicOff className="h-4 w-4" />
@@ -495,9 +626,7 @@ export function ConversationModule({ lesson, onComplete }: Props) {
             variant="outline"
             size="sm"
             data-ocid="conversation.complete.secondary_button"
-            onClick={() => {
-              setCompleted(true);
-            }}
+            onClick={() => setCompleted(true)}
             className="text-muted-foreground text-xs"
           >
             Complete with current progress

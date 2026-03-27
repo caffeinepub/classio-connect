@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
+import { Mic, MicOff } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type WordEntry = { word: string; meaning: string; emoji: string };
 
@@ -263,13 +264,42 @@ function shuffle<T>(arr: T[]): T[] {
   return [...arr].sort(() => Math.random() - 0.5);
 }
 
+function pronunciationScore(spoken: string, target: string): number {
+  const s = spoken.toLowerCase().trim();
+  const t = target.toLowerCase().trim();
+  if (s === t) return 100;
+  const m = s.length;
+  const n = t.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, (_, i) =>
+    Array(n + 1)
+      .fill(0)
+      .map((_, j) => (i === 0 ? j : j === 0 ? i : 0)),
+  );
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] =
+        s[i - 1] === t[j - 1]
+          ? dp[i - 1][j - 1]
+          : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+  const maxLen = Math.max(m, n);
+  return maxLen === 0 ? 100 : Math.round((1 - dp[m][n] / maxLen) * 100);
+}
+
+const hasSpeechRecognition =
+  typeof window !== "undefined" &&
+  !!(window.SpeechRecognition || (window as any).webkitSpeechRecognition);
+
+interface PronunciationResult {
+  score: number;
+  transcript: string;
+}
+
 interface Props {
   lesson: number;
   onComplete: (score: number, total: number) => void;
 }
 
 export function VocabularyModule({ lesson, onComplete }: Props) {
-  // Clamp lesson to available keys (1–10); fallback to grade-appropriate closest
   const clampedLesson = Math.min(Math.max(lesson, 1), 10);
   const words = LESSON_WORDS[clampedLesson] ?? LESSON_WORDS[1];
   const matchWords = words.slice(0, 4);
@@ -289,7 +319,26 @@ export function VocabularyModule({ lesson, onComplete }: Props) {
   const [done, setDone] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
 
+  // Pronunciation mic state
+  const [isRecording, setIsRecording] = useState(false);
+  const [pronunciationResult, setPronunciationResult] =
+    useState<PronunciationResult | null>(null);
+  const recognitionRef = useRef<any>(null);
+
   const currentWord = words[cardIndex];
+
+  // Clear pronunciation result when card changes
+  // biome-ignore lint/correctness/useExhaustiveDependencies: cardIndex is intentionally used as a trigger
+  useEffect(() => {
+    setPronunciationResult(null);
+    setIsRecording(false);
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.abort();
+      } catch {}
+      recognitionRef.current = null;
+    }
+  }, [cardIndex]);
 
   const speakWord = (word: string) => {
     try {
@@ -300,8 +349,58 @@ export function VocabularyModule({ lesson, onComplete }: Props) {
     } catch {}
   };
 
+  const startRecording = () => {
+    if (!hasSpeechRecognition) return;
+    const SpeechRecognition =
+      window.SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-US";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognitionRef.current = recognition;
+
+    recognition.onstart = () => setIsRecording(true);
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      const sc = pronunciationScore(transcript, currentWord.word);
+      setPronunciationResult({ score: sc, transcript });
+      setIsRecording(false);
+      setHasInteracted(true);
+
+      if (sc >= 80) {
+        setTimeout(() => {
+          setPronunciationResult(null);
+          nextCard();
+        }, 1200);
+      }
+    };
+
+    recognition.onerror = () => {
+      setIsRecording(false);
+      setPronunciationResult({ score: 0, transcript: "(could not hear you)" });
+    };
+
+    recognition.onend = () => {
+      setIsRecording(false);
+      recognitionRef.current = null;
+    };
+
+    recognition.start();
+  };
+
+  const stopRecording = () => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {}
+    }
+    setIsRecording(false);
+  };
+
   const nextCard = () => {
     setFlipped(false);
+    setPronunciationResult(null);
     if (cardIndex + 1 >= words.length) {
       setPhase("match");
     } else {
@@ -381,6 +480,7 @@ export function VocabularyModule({ lesson, onComplete }: Props) {
               Grade {clampedLesson} Vocabulary
             </p>
           </div>
+
           <AnimatePresence mode="wait">
             <motion.div
               key={cardIndex}
@@ -414,17 +514,90 @@ export function VocabularyModule({ lesson, onComplete }: Props) {
               </div>
             </motion.div>
           </AnimatePresence>
+
+          {/* Pronunciation feedback box */}
+          <AnimatePresence>
+            {pronunciationResult && (
+              <motion.div
+                key="pron-feedback"
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                className={`rounded-xl border p-4 space-y-2 ${
+                  pronunciationResult.score >= 80
+                    ? "bg-green-50 border-green-300"
+                    : "bg-amber-50 border-amber-300"
+                }`}
+                data-ocid="vocab.pronunciation.success_state"
+              >
+                <div className="flex items-center justify-between">
+                  <span
+                    className={`text-sm font-semibold ${
+                      pronunciationResult.score >= 80
+                        ? "text-green-700"
+                        : "text-amber-700"
+                    }`}
+                  >
+                    {pronunciationResult.score >= 80
+                      ? `Your pronunciation score: ${pronunciationResult.score}% — Excellent! Moving forward...`
+                      : `Your pronunciation score: ${pronunciationResult.score}% — You said "${pronunciationResult.transcript}". Try saying "${currentWord.word}" again.`}
+                  </span>
+                </div>
+                {/* Score bar */}
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${pronunciationResult.score}%` }}
+                    transition={{ duration: 0.5 }}
+                    className={`h-2 rounded-full ${
+                      pronunciationResult.score >= 80
+                        ? "bg-green-500"
+                        : "bg-amber-400"
+                    }`}
+                  />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Button row */}
           <div className="flex gap-3">
             <Button
               variant="outline"
               className="flex-1 gap-2"
               onClick={() => speakWord(currentWord.word)}
+              data-ocid="vocab.hear.button"
             >
-              🔊 Hear Pronunciation
+              🔊 Hear
             </Button>
+
+            {hasSpeechRecognition ? (
+              <Button
+                variant={isRecording ? "destructive" : "outline"}
+                className={`flex-1 gap-2 ${isRecording ? "animate-pulse" : ""}`}
+                onClick={isRecording ? stopRecording : startRecording}
+                data-ocid="vocab.pronounce.button"
+              >
+                {isRecording ? (
+                  <>
+                    <MicOff className="w-4 h-4" /> Listening...
+                  </>
+                ) : (
+                  <>
+                    <Mic className="w-4 h-4" /> Pronounce
+                  </>
+                )}
+              </Button>
+            ) : (
+              <div className="flex-1 flex items-center justify-center text-xs text-muted-foreground bg-secondary rounded-lg px-3 py-2">
+                Voice check not supported in this browser
+              </div>
+            )}
+
             <Button
               className="flex-1 gradient-cyan text-primary-foreground"
               onClick={nextCard}
+              data-ocid="vocab.next.button"
             >
               {cardIndex + 1 >= words.length
                 ? "Start Matching →"

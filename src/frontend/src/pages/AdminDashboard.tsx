@@ -24,11 +24,12 @@ import {
   Loader2,
   LogOut,
   Plus,
+  RefreshCw,
   Trash2,
   Users,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useActor } from "../hooks/useActor";
 
@@ -41,6 +42,22 @@ type TeacherRecord = {
 
 type NavItem = "overview" | "teachers";
 
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  retries = 4,
+  delayMs = 2000,
+): Promise<T> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (attempt === retries) throw err;
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+  throw new Error("Unreachable");
+}
+
 export function AdminDashboard() {
   const navigate = useNavigate();
   const { actor, isFetching } = useActor();
@@ -48,6 +65,7 @@ export function AdminDashboard() {
   const [teachers, setTeachers] = useState<TeacherRecord[]>([]);
   const [totalStudents, setTotalStudents] = useState(0);
   const [isLoadingData, setIsLoadingData] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [newTeacherName, setNewTeacherName] = useState("");
   const [newTeacherEmail, setNewTeacherEmail] = useState("");
@@ -61,17 +79,31 @@ export function AdminDashboard() {
     }
   }, [navigate]);
 
+  const loadData = useCallback(async (currentActor: typeof actor) => {
+    if (!currentActor) return;
+    setLoadError(false);
+    setIsLoadingData(true);
+    try {
+      const [teacherList, studentList] = await withRetry(() =>
+        Promise.all([
+          currentActor.getAllTeachers(),
+          currentActor.getAllStudents(),
+        ]),
+      );
+      setTeachers(teacherList || []);
+      setTotalStudents((studentList || []).length);
+    } catch {
+      setLoadError(true);
+      toast.error("Could not connect to the server. Please retry.");
+    } finally {
+      setIsLoadingData(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!actor) return;
-    setIsLoadingData(true);
-    Promise.all([actor.getAllTeachers(), actor.getAllStudents()])
-      .then(([teacherList, studentList]) => {
-        setTeachers(teacherList || []);
-        setTotalStudents((studentList || []).length);
-      })
-      .catch(() => toast.error("Failed to load data"))
-      .finally(() => setIsLoadingData(false));
-  }, [actor]);
+    loadData(actor);
+  }, [actor, loadData]);
 
   const handleAddTeacher = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -342,116 +374,141 @@ export function AdminDashboard() {
               Admin • Classio Connect
             </p>
           </div>
-          {activeNav === "teachers" && (
-            <Dialog
-              open={addModalOpen}
-              onOpenChange={(o) => {
-                setAddModalOpen(o);
-                if (!o) setCreatedTeacherId(null);
-              }}
-            >
-              <DialogTrigger asChild>
-                <Button
-                  data-ocid="admin.add_teacher.open_modal_button"
-                  size="sm"
-                  className="gradient-cyan text-primary-foreground"
-                >
-                  <Plus className="h-4 w-4 mr-1" /> Add Teacher
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="bg-card border-border max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Add New Teacher</DialogTitle>
-                </DialogHeader>
-                {createdTeacherId ? (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="space-y-4"
+          <div className="flex items-center gap-2">
+            {loadError && (
+              <Button
+                data-ocid="admin.retry.button"
+                size="sm"
+                variant="outline"
+                onClick={() => loadData(actor)}
+                className="gap-1.5"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Retry
+              </Button>
+            )}
+            {activeNav === "teachers" && (
+              <Dialog
+                open={addModalOpen}
+                onOpenChange={(o) => {
+                  setAddModalOpen(o);
+                  if (!o) setCreatedTeacherId(null);
+                }}
+              >
+                <DialogTrigger asChild>
+                  <Button
+                    data-ocid="admin.add_teacher.open_modal_button"
+                    size="sm"
+                    className="gradient-cyan text-primary-foreground"
                   >
-                    <div
-                      data-ocid="admin.teacher_created.success_state"
-                      className="rounded-xl border border-success/30 bg-success/10 p-5 text-center"
+                    <Plus className="h-4 w-4 mr-1" /> Add Teacher
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="bg-card border-border max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Add New Teacher</DialogTitle>
+                  </DialogHeader>
+                  {createdTeacherId ? (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="space-y-4"
                     >
-                      <div className="text-3xl mb-2">🎉</div>
-                      <p className="text-sm text-muted-foreground mb-1">
-                        Teacher created! Share this ID:
-                      </p>
-                      <div className="flex items-center justify-center gap-2 mt-3">
-                        <span className="text-3xl font-bold text-primary font-display">
-                          {createdTeacherId}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            navigator.clipboard.writeText(createdTeacherId);
-                            toast.success("Copied!");
-                          }}
-                          className="p-1.5 rounded-lg hover:bg-accent"
-                        >
-                          <Copy className="h-4 w-4 text-muted-foreground" />
-                        </button>
+                      <div
+                        data-ocid="admin.teacher_created.success_state"
+                        className="rounded-xl border border-success/30 bg-success/10 p-5 text-center"
+                      >
+                        <div className="text-3xl mb-2">🎉</div>
+                        <p className="text-sm text-muted-foreground mb-1">
+                          Teacher created! Share this ID:
+                        </p>
+                        <div className="flex items-center justify-center gap-2 mt-3">
+                          <span className="text-3xl font-bold text-primary font-display">
+                            {createdTeacherId}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(createdTeacherId);
+                              toast.success("Copied!");
+                            }}
+                            className="p-1.5 rounded-lg hover:bg-accent"
+                          >
+                            <Copy className="h-4 w-4 text-muted-foreground" />
+                          </button>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Teacher will use this ID + their email to login
+                        </p>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Teacher will use this ID + their email to login
-                      </p>
-                    </div>
-                    <Button
-                      data-ocid="admin.teacher_created.close_button"
-                      className="w-full"
-                      variant="outline"
-                      onClick={() => {
-                        setAddModalOpen(false);
-                        setCreatedTeacherId(null);
-                      }}
-                    >
-                      Done
-                    </Button>
-                  </motion.div>
-                ) : (
-                  <form onSubmit={handleAddTeacher} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>Full Name</Label>
-                      <Input
-                        data-ocid="admin.teacher_name.input"
-                        placeholder="e.g. Priya Sharma"
-                        value={newTeacherName}
-                        onChange={(e) => setNewTeacherName(e.target.value)}
-                        className="bg-secondary"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Email Address</Label>
-                      <Input
-                        data-ocid="admin.teacher_email.input"
-                        type="email"
-                        placeholder="teacher@school.com"
-                        value={newTeacherEmail}
-                        onChange={(e) => setNewTeacherEmail(e.target.value)}
-                        className="bg-secondary"
-                      />
-                    </div>
-                    <Button
-                      data-ocid="admin.add_teacher.submit_button"
-                      type="submit"
-                      disabled={isAdding || !actor}
-                      className="w-full gradient-cyan text-primary-foreground"
-                    >
-                      {(isFetching && !actor) || isAdding ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : null}
-                      {isFetching && !actor
-                        ? "Connecting..."
-                        : isAdding
-                          ? "Creating..."
-                          : "Create Teacher"}
-                    </Button>
-                  </form>
-                )}
-              </DialogContent>
-            </Dialog>
-          )}
+                      <Button
+                        data-ocid="admin.teacher_created.close_button"
+                        className="w-full"
+                        variant="outline"
+                        onClick={() => {
+                          setAddModalOpen(false);
+                          setCreatedTeacherId(null);
+                        }}
+                      >
+                        Done
+                      </Button>
+                    </motion.div>
+                  ) : (
+                    <form onSubmit={handleAddTeacher} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Full Name</Label>
+                        <Input
+                          data-ocid="admin.teacher_name.input"
+                          placeholder="e.g. Priya Sharma"
+                          value={newTeacherName}
+                          onChange={(e) => setNewTeacherName(e.target.value)}
+                          className="bg-secondary"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Email Address</Label>
+                        <Input
+                          data-ocid="admin.teacher_email.input"
+                          type="email"
+                          placeholder="teacher@school.com"
+                          value={newTeacherEmail}
+                          onChange={(e) => setNewTeacherEmail(e.target.value)}
+                          className="bg-secondary"
+                        />
+                      </div>
+                      <Button
+                        data-ocid="admin.add_teacher.submit_button"
+                        type="submit"
+                        disabled={isAdding || !actor}
+                        className="w-full gradient-cyan text-primary-foreground"
+                      >
+                        {(isFetching && !actor) || isAdding ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : null}
+                        {isFetching && !actor
+                          ? "Connecting..."
+                          : isAdding
+                            ? "Creating..."
+                            : "Create Teacher"}
+                      </Button>
+                    </form>
+                  )}
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
         </header>
+
+        {/* Connecting banner */}
+        {!actor && isFetching && (
+          <div
+            data-ocid="admin.connecting.loading_state"
+            className="flex items-center gap-2 px-8 py-2.5 bg-primary/10 border-b border-primary/20 text-sm text-primary"
+          >
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Connecting to server, please wait...
+          </div>
+        )}
 
         <div className="p-8">
           {activeNav === "overview" && (
@@ -553,6 +610,25 @@ export function AdminDashboard() {
                     className="flex items-center justify-center py-16"
                   >
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : loadError ? (
+                  <div
+                    data-ocid="admin.teachers.error_state"
+                    className="flex flex-col items-center justify-center py-16 gap-4"
+                  >
+                    <p className="text-muted-foreground text-center">
+                      Could not load data. The server may still be warming up.
+                    </p>
+                    <Button
+                      data-ocid="admin.teachers.retry.button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => loadData(actor)}
+                      className="gap-1.5"
+                    >
+                      <RefreshCw className="h-3.5 w-3.5" />
+                      Retry
+                    </Button>
                   </div>
                 ) : teachers.length === 0 ? (
                   <div
