@@ -126,7 +126,7 @@ export function LoginPage() {
         className="mb-8 flex flex-col items-center"
       >
         <img
-          src="/assets/uploads/classio_logo_reel_compressed-019d290d-aec1-724b-a11c-a9a7f8c9394d-1.jpeg"
+          src="/assets/uploads/whatsapp_image_2026-03-26_at_21.57.49-019d2de3-2709-728a-a238-de560718a29b-1.jpeg"
           alt="Classio Connect"
           className="h-16 w-auto rounded-lg object-contain"
         />

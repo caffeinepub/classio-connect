@@ -228,7 +228,7 @@ export function TeacherDashboard() {
       <aside className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col shrink-0">
         <div className="p-6 border-b border-sidebar-border">
           <img
-            src="/assets/uploads/classio_logo_reel_compressed-019d290d-aec1-724b-a11c-a9a7f8c9394d-1.jpeg"
+            src="/assets/uploads/whatsapp_image_2026-03-26_at_21.57.49-019d2de3-2709-728a-a238-de560718a29b-1.jpeg"
             alt="Classio"
             className="h-9 w-auto rounded object-contain"
           />

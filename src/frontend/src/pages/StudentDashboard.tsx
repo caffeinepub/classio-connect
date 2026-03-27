@@ -40,6 +40,7 @@ import {
   YAxis,
 } from "recharts";
 import { toast } from "sonner";
+import { ModuleIcon } from "../components/ModuleIcons";
 import { useActor } from "../hooks/useActor";
 
 type StudentRecord = {
@@ -185,24 +186,6 @@ const MODULES: Module[] = [
     level: "Advanced",
   },
 ];
-
-const MODULE_GLOW: Record<string, string> = {
-  "Vocabulary Builder": "drop-shadow(0 0 10px rgba(6,182,212,0.7))",
-  "Grammar Essentials": "drop-shadow(0 0 10px rgba(139,92,246,0.7))",
-  "Pronunciation Practice": "drop-shadow(0 0 10px rgba(249,115,22,0.7))",
-  "Listening Skills": "drop-shadow(0 0 10px rgba(59,130,246,0.7))",
-  "Conversation Practice": "drop-shadow(0 0 10px rgba(34,197,94,0.7))",
-  "Reading Comprehension": "drop-shadow(0 0 10px rgba(99,102,241,0.7))",
-  "Shadowing Practice": "drop-shadow(0 0 10px rgba(234,179,8,0.7))",
-  "AI Roleplay": "drop-shadow(0 0 10px rgba(239,68,68,0.7))",
-  "Picture Speaking": "drop-shadow(0 0 10px rgba(16,185,129,0.7))",
-  "Fill-in-the-Conversation": "drop-shadow(0 0 10px rgba(20,184,166,0.7))",
-  "Daily Speaking Streak": "drop-shadow(0 0 10px rgba(249,115,22,0.8))",
-  "Timed Speaking Challenge": "drop-shadow(0 0 10px rgba(244,63,94,0.7))",
-  "Word of the Day": "drop-shadow(0 0 10px rgba(234,179,8,0.8))",
-  "Weekly Voice Journal": "drop-shadow(0 0 10px rgba(99,102,241,0.7))",
-  "AI Content Discovery": "drop-shadow(0 0 12px rgba(124,58,237,0.8))",
-};
 
 function generateRemark(moduleName: string, score: number): string {
   if (score >= 90)
@@ -469,8 +452,6 @@ export function StudentDashboard() {
   if (activeModuleLesson) {
     const { module, lesson } = activeModuleLesson;
     const progressPct = Math.round((lesson / module.totalLessons) * 100);
-    const glowFilter =
-      MODULE_GLOW[module.name] ?? "drop-shadow(0 0 8px rgba(99,102,241,0.6))";
 
     const renderModule = () => {
       const props = { lesson, onComplete: handleModuleComplete };
@@ -546,12 +527,9 @@ export function StudentDashboard() {
             className="space-y-6"
           >
             <div className="flex items-center gap-3 mb-2">
-              <img
-                src={module.icon}
-                alt={module.name}
-                className="w-12 h-12 object-contain rounded-lg"
-                style={{ filter: glowFilter }}
-              />
+              <div className="w-12 h-12 flex-shrink-0">
+                <ModuleIcon moduleName={module.name} size={48} />
+              </div>
               <div>
                 <h1 className="text-xl font-bold">{module.name}</h1>
                 <p className="text-sm text-muted-foreground">Lesson {lesson}</p>
@@ -573,7 +551,7 @@ export function StudentDashboard() {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-20 bg-white/80 backdrop-blur border-b border-border px-6 py-3 flex items-center justify-between">
         <img
-          src="/assets/uploads/classio_logo_reel_compressed-019d290d-aec1-724b-a11c-a9a7f8c9394d-1.jpeg"
+          src="/assets/uploads/whatsapp_image_2026-03-26_at_21.57.49-019d2de3-2709-728a-a238-de560718a29b-1.jpeg"
           alt="Classio"
           className="h-9 w-auto rounded object-contain"
         />
@@ -673,12 +651,9 @@ export function StudentDashboard() {
                 }`}
               >
                 <div className="flex items-start justify-between">
-                  <img
-                    src={module.icon}
-                    alt={module.name}
-                    className="w-16 h-16 object-contain rounded-xl"
-                    style={{ filter: MODULE_GLOW[module.name] }}
-                  />
+                  <div className="w-16 h-16 flex-shrink-0">
+                    <ModuleIcon moduleName={module.name} size={64} />
+                  </div>
                   <div className="flex flex-col items-end gap-1">
                     <Badge className={`text-xs ${getLevelColor(module.level)}`}>
                       {module.level}
@@ -921,12 +896,9 @@ export function StudentDashboard() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         {mod ? (
-                          <img
-                            src={mod.icon}
-                            alt={mod.name}
-                            className="w-8 h-8 object-contain rounded-lg"
-                            style={{ filter: MODULE_GLOW[mod.name] }}
-                          />
+                          <div className="w-8 h-8 flex-shrink-0">
+                            <ModuleIcon moduleName={mod.name} size={32} />
+                          </div>
                         ) : (
                           <span className="text-2xl">📚</span>
                         )}

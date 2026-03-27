@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { GraduationCap, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
@@ -30,20 +30,11 @@ export function Navbar() {
           className="flex items-center gap-2.5 group"
           data-ocid="nav.link"
         >
-          <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shadow-sm">
-            <GraduationCap className="w-5 h-5 text-white" />
-          </div>
-          <div className="leading-tight">
-            <div className="text-sm font-bold text-foreground tracking-tight">
-              Classio
-            </div>
-            <div
-              className="text-xs font-medium text-primary"
-              style={{ marginTop: "-2px" }}
-            >
-              Connect
-            </div>
-          </div>
+          <img
+            src="/assets/uploads/whatsapp_image_2026-03-26_at_21.57.49-019d2de3-2709-728a-a238-de560718a29b-1.jpeg"
+            alt="Classio Connect"
+            className="h-10 w-auto rounded-lg object-contain"
+          />
         </Link>
 
         {/* Desktop Nav */}
