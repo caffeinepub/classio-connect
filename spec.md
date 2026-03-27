@@ -1,26 +1,36 @@
 # Classio Connect
 
 ## Current State
-The platform has 14 learning modules in the student dashboard including Vocabulary, Grammar, Pronunciation, Listening, Conversation, Reading, Shadowing Practice, AI Roleplay, Picture Speaking, Fill-in-the-Conversation, Daily Speaking Streak, Timed Speaking Challenge, Word of the Day, and Weekly Voice Journal. The http-outcalls component is not yet selected.
+- 15 modules in student dashboard, all accessible via `activeModuleLesson` state
+- `handleModuleComplete` is a `useCallback` that calls `setActiveModuleLesson(null)` at the end
+- Each module shows a "Complete Lesson" button only after completing ALL steps (e.g., VocabularyModule requires completing all 4 word matches)
+- ConversationModule: character text responses are displayed but there is NO text-to-speech — characters never speak out loud
+- `isSpeaking` state animates the character for 2200ms but no `speechSynthesis.speak()` is called
 
 ## Requested Changes (Diff)
 
 ### Add
-- **AI Content Discovery module** (15th module card): Powered by NVIDIA NV-Embed-v2, this module lets students type any English topic or question and get semantically matched learning content from a large embedded content library (500+ vocabulary words, grammar rules, reading passages, speaking prompts, listening exercises).
-- **NVEmbedService utility**: A frontend service that simulates NV-Embed-v2 vector embeddings using TF-IDF cosine similarity across the content corpus. The NVIDIA API endpoint structure is wired and ready to accept a real `NVIDIA_API_KEY` env variable for live calls via http-outcalls backend.
-- **ContentDiscoveryModule component**: Full interactive UI with a search bar, semantic results display with content type badges, "endless scroll" pagination of matched content, and a "Load More" button that fetches 10 more semantically ranked results.
-- Backend http-outcalls support selected for future live NVIDIA API integration.
+- Text-to-speech to ConversationModule: when character (Lexi) sends a message, use `window.speechSynthesis` to speak it aloud. Cancel any ongoing speech before speaking new message. Add a speaker icon to toggle TTS on/off. On/off state saved in component state.
+- A visible fallback "Skip to Complete" or persistent "Complete Lesson" button in ALL 9 modules that appears after the student has done at least minimal interaction (e.g., after first activity attempt), so students are never stuck.
 
 ### Modify
-- `StudentDashboard.tsx`: Add the new AI Content Discovery module card (15th) with a purple/violet glow matching NVIDIA's branding, and wire it to the new ContentDiscoveryModule component.
-- `MODULE_GLOW` map: Add entry for "AI Content Discovery".
+- All 9 modules (Vocabulary, Grammar, Pronunciation, Listening, Conversation, Reading, Shadowing, AI Roleplay, Picture Speaking): Ensure the Complete Lesson button is always reachable. Add a secondary "Complete Lesson" button (smaller, muted style) visible after the first activity step, so students can complete even if they get stuck on matching/recording/etc.
+- ConversationModule `sendText`: after adding Lexi's message, call `speechSynthesis.speak(new SpeechSynthesisUtterance(lexiText))` to speak the character's response. Cancel previous speech first.
+- ConversationModule initial greeting: also speak the initial message via TTS when a character is selected.
 
 ### Remove
-- Nothing removed.
+- Nothing removed
 
 ## Implementation Plan
-1. Select `http-outcalls` component for future backend NVIDIA API calls.
-2. Create `src/frontend/src/utils/nvEmbedService.ts` with the content corpus (500+ items across vocabulary, grammar, reading, speaking, listening categories) and cosine similarity search.
-3. Create `src/frontend/src/components/modules/ContentDiscoveryModule.tsx` with search input, loading state, result cards, and endless load-more pagination.
-4. Update `StudentDashboard.tsx`: add module entry for "AI Content Discovery", add to MODULES array, add to MODULE_GLOW, add the `renderModule()` case.
-5. Validate and deploy.
+1. In `ConversationModule.tsx`:
+   - Add `ttsEnabled` state (default true)
+   - Add `speakText(text: string)` helper that cancels current speech and speaks new text if ttsEnabled
+   - Call `speakText(lexiMsg.text)` inside `sendText` after building lexiMsg
+   - Call `speakText(initMsg)` in `startWithCharacter`
+   - Cancel speech on component unmount via useEffect cleanup
+   - Add a speaker toggle button (🔊/🔇) in the character panel header
+2. In each of the 9 modules, add a secondary escape/complete button:
+   - Show a small "Complete Lesson" button (variant='outline', smaller) that appears after first meaningful interaction
+   - This ensures students who are stuck (e.g., can't do recording, can't complete matching game) can always exit
+   - Track `hasInteracted` boolean state, set to true on first button click / first answer attempt
+3. Validate and deploy

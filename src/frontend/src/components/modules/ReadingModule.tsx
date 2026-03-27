@@ -609,6 +609,19 @@ export function ReadingModule({ lesson, onComplete }: Props) {
           </Button>
         </motion.div>
       )}
+      {Object.keys(answers).length >= 1 && !submitted && (
+        <div className="pt-2 text-center">
+          <Button
+            variant="outline"
+            size="sm"
+            data-ocid="reading.complete.secondary_button"
+            onClick={() => onComplete(score, total)}
+            className="text-muted-foreground text-xs"
+          >
+            Complete with current progress
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

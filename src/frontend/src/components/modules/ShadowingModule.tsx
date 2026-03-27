@@ -343,6 +343,19 @@ export function ShadowingModule({ grade = 1, onComplete }: Props) {
         💡 Tip: Listen carefully first, then record yourself saying the same
         sentence with the same rhythm.
       </p>
+      {Object.keys(attempts).length >= 1 && (
+        <div className="pt-2 text-center">
+          <Button
+            variant="outline"
+            size="sm"
+            data-ocid="shadowing.complete.secondary_button"
+            onClick={() => onComplete(avgAccuracy, 100)}
+            className="text-muted-foreground text-xs"
+          >
+            Complete with current progress
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

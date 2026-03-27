@@ -27,7 +27,7 @@ import {
   X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -305,107 +305,110 @@ export function StudentDashboard() {
     setActiveModuleLesson({ module, lesson: clampedLesson });
   };
 
-  const handleModuleComplete = async (score: number, total: number) => {
-    if (!activeModuleLesson) return;
-    const { module, lesson } = activeModuleLesson;
-    const percent = total > 0 ? Math.round((score / total) * 100) : 0;
-    const remark = generateRemark(module.name, percent);
+  const handleModuleComplete = useCallback(
+    async (score: number, total: number) => {
+      if (!activeModuleLesson) return;
+      const { module, lesson } = activeModuleLesson;
+      const percent = total > 0 ? Math.round((score / total) * 100) : 0;
+      const remark = generateRemark(module.name, percent);
 
-    const sid = student
-      ? String(student.id)
-      : (() => {
-          try {
-            const s = localStorage.getItem("classio_student");
-            return s ? String(JSON.parse(s).id) : "";
-          } catch {
-            return "";
-          }
-        })();
+      const sid = student
+        ? String(student.id)
+        : (() => {
+            try {
+              const s = localStorage.getItem("classio_student");
+              return s ? String(JSON.parse(s).id) : "";
+            } catch {
+              return "";
+            }
+          })();
 
-    if (student && actor) {
-      (actor as any)
-        .saveActivityReport(
-          BigInt(String(student.id)),
-          module.name,
-          BigInt(score),
-          BigInt(total),
+      if (student && actor) {
+        (actor as any)
+          .saveActivityReport(
+            BigInt(String(student.id)),
+            module.name,
+            BigInt(score),
+            BigInt(total),
+            remark,
+          )
+          .catch(() => {});
+      }
+
+      if (sid) {
+        const newReport: LocalReport = {
+          moduleName: module.name,
+          score: percent,
+          total,
+          percent,
           remark,
-        )
-        .catch(() => {});
-    }
+          completedAt: new Date().toLocaleDateString(),
+        };
+        const key = `classio_reports_${sid}`;
+        const existing = localStorage.getItem(key);
+        let existing_reports: LocalReport[] = [];
+        try {
+          existing_reports = existing ? JSON.parse(existing) : [];
+        } catch {}
+        const filtered = existing_reports.filter(
+          (r) => r.moduleName !== module.name,
+        );
+        const updated = [...filtered, newReport];
+        localStorage.setItem(key, JSON.stringify(updated));
+        setReports(updated);
+      }
 
-    if (sid) {
-      const newReport: LocalReport = {
-        moduleName: module.name,
-        score: percent,
-        total,
-        percent,
-        remark,
-        completedAt: new Date().toLocaleDateString(),
-      };
-      const key = `classio_reports_${sid}`;
-      const existing = localStorage.getItem(key);
-      let existing_reports: LocalReport[] = [];
-      try {
-        existing_reports = existing ? JSON.parse(existing) : [];
-      } catch {}
-      const filtered = existing_reports.filter(
-        (r) => r.moduleName !== module.name,
-      );
-      const updated = [...filtered, newReport];
-      localStorage.setItem(key, JSON.stringify(updated));
-      setReports(updated);
-    }
+      let nextLesson: number;
+      const minLesson = assignedGrade ?? 1;
+      if (percent >= 80) {
+        nextLesson = Math.min(lesson + 1, module.totalLessons);
+        toast.success(
+          `${module.name} completed! Score: ${percent}% 🎉 Moving to a harder lesson!`,
+        );
+      } else if (percent < 50) {
+        nextLesson = Math.max(lesson - 1, minLesson, 1);
+        toast.info(
+          `Score: ${percent}%. Let's try this lesson again for more practice.`,
+        );
+      } else {
+        nextLesson = Math.min(lesson, module.totalLessons);
+        toast.success(`${module.name} completed! Score: ${percent}% 🎉`);
+      }
 
-    let nextLesson: number;
-    const minLesson = assignedGrade ?? 1;
-    if (percent >= 80) {
-      nextLesson = Math.min(lesson + 1, module.totalLessons);
-      toast.success(
-        `${module.name} completed! Score: ${percent}% 🎉 Moving to a harder lesson!`,
-      );
-    } else if (percent < 50) {
-      nextLesson = Math.max(lesson - 1, minLesson, 1);
-      toast.info(
-        `Score: ${percent}%. Let's try this lesson again for more practice.`,
-      );
-    } else {
-      nextLesson = Math.min(lesson, module.totalLessons);
-      toast.success(`${module.name} completed! Score: ${percent}% 🎉`);
-    }
+      const newProgress = { ...moduleProgress, [module.name]: nextLesson };
+      setModuleProgress(newProgress);
 
-    const newProgress = { ...moduleProgress, [module.name]: nextLesson };
-    setModuleProgress(newProgress);
+      if (sid) {
+        localStorage.setItem(
+          `classio_mod_${sid}_${module.name}`,
+          String(nextLesson),
+        );
 
-    if (sid) {
-      localStorage.setItem(
-        `classio_mod_${sid}_${module.name}`,
-        String(nextLesson),
-      );
+        const progressData: StudentProgress = {
+          currentModule: module.name,
+          currentLesson: nextLesson,
+        };
+        setSavedProgress(progressData);
+        localStorage.setItem(
+          `classio_student_progress_${sid}`,
+          JSON.stringify(progressData),
+        );
+      }
 
-      const progressData: StudentProgress = {
-        currentModule: module.name,
-        currentLesson: nextLesson,
-      };
-      setSavedProgress(progressData);
-      localStorage.setItem(
-        `classio_student_progress_${sid}`,
-        JSON.stringify(progressData),
-      );
-    }
+      if (student && actor) {
+        actor
+          .updateStudentProgress(
+            BigInt(String(student.id)),
+            module.name,
+            BigInt(nextLesson),
+          )
+          .catch(() => {});
+      }
 
-    if (student && actor) {
-      actor
-        .updateStudentProgress(
-          BigInt(String(student.id)),
-          module.name,
-          BigInt(nextLesson),
-        )
-        .catch(() => {});
-    }
-
-    setActiveModuleLesson(null);
-  };
+      setActiveModuleLesson(null);
+    },
+    [activeModuleLesson, student, actor, moduleProgress, assignedGrade],
+  );
 
   const getModuleProgressPercent = (module: Module) => {
     const done = moduleProgress[module.name] ?? 0;
@@ -460,39 +463,87 @@ export function StudentDashboard() {
       const props = { lesson, onComplete: handleModuleComplete };
       switch (module.name) {
         case "Vocabulary Builder":
-          return <VocabularyModule {...props} />;
+          return <VocabularyModule key={`vocab-${lesson}`} {...props} />;
         case "Grammar Essentials":
-          return <GrammarModule {...props} />;
+          return <GrammarModule key={`grammar-${lesson}`} {...props} />;
         case "Pronunciation Practice":
-          return <PronunciationModule {...props} />;
+          return (
+            <PronunciationModule key={`pronunciation-${lesson}`} {...props} />
+          );
         case "Listening Skills":
-          return <ListeningModule {...props} />;
+          return <ListeningModule key={`listening-${lesson}`} {...props} />;
         case "Conversation Practice":
-          return <ConversationModule {...props} />;
+          return (
+            <ConversationModule key={`conversation-${lesson}`} {...props} />
+          );
         case "Reading Comprehension":
-          return <ReadingModule {...props} />;
+          return <ReadingModule key={`reading-${lesson}`} {...props} />;
         case "Shadowing Practice":
-          return <ShadowingModule {...props} grade={assignedGrade ?? 1} />;
+          return (
+            <ShadowingModule
+              key={`shadowing-${lesson}`}
+              {...props}
+              grade={assignedGrade ?? 1}
+            />
+          );
         case "AI Roleplay":
-          return <RoleplayModule {...props} grade={assignedGrade ?? 1} />;
+          return (
+            <RoleplayModule
+              key={`roleplay-${lesson}`}
+              {...props}
+              grade={assignedGrade ?? 1}
+            />
+          );
         case "Picture Speaking":
-          return <PictureBasedSpeakingModule {...props} />;
+          return (
+            <PictureBasedSpeakingModule key={`picture-${lesson}`} {...props} />
+          );
         case "Fill-in-the-Conversation":
           return (
-            <FillConversationModule {...props} grade={assignedGrade ?? 1} />
+            <FillConversationModule
+              key={`fill-${lesson}`}
+              {...props}
+              grade={assignedGrade ?? 1}
+            />
           );
         case "Daily Speaking Streak":
           return (
-            <DailySpeakingStreakModule {...props} grade={assignedGrade ?? 1} />
+            <DailySpeakingStreakModule
+              key={`daily-${lesson}`}
+              {...props}
+              grade={assignedGrade ?? 1}
+            />
           );
         case "Timed Speaking Challenge":
-          return <TimedSpeakingModule {...props} grade={assignedGrade ?? 1} />;
+          return (
+            <TimedSpeakingModule
+              key={`timed-${lesson}`}
+              {...props}
+              grade={assignedGrade ?? 1}
+            />
+          );
         case "Word of the Day":
-          return <WordOfTheDayModule {...props} grade={assignedGrade ?? 1} />;
+          return (
+            <WordOfTheDayModule
+              key={`word-${lesson}`}
+              {...props}
+              grade={assignedGrade ?? 1}
+            />
+          );
         case "Weekly Voice Journal":
-          return <WeeklyVoiceJournalModule onComplete={handleModuleComplete} />;
+          return (
+            <WeeklyVoiceJournalModule
+              key={`journal-${lesson}`}
+              onComplete={handleModuleComplete}
+            />
+          );
         case "AI Content Discovery":
-          return <ContentDiscoveryModule onComplete={handleModuleComplete} />;
+          return (
+            <ContentDiscoveryModule
+              key={`discovery-${lesson}`}
+              onComplete={handleModuleComplete}
+            />
+          );
         default:
           return null;
       }

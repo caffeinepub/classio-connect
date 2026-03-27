@@ -287,6 +287,7 @@ export function VocabularyModule({ lesson, onComplete }: Props) {
   );
   const [score, setScore] = useState(0);
   const [done, setDone] = useState(false);
+  const [hasInteracted, setHasInteracted] = useState(false);
 
   const currentWord = words[cardIndex];
 
@@ -311,6 +312,7 @@ export function VocabularyModule({ lesson, onComplete }: Props) {
   const handleSelectWord = (word: string) => {
     if (matched[word]) return;
     setSelectedWord(word);
+    setHasInteracted(true);
   };
 
   const handleSelectDef = (def: string) => {
@@ -386,7 +388,10 @@ export function VocabularyModule({ lesson, onComplete }: Props) {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -30 }}
               className="cursor-pointer"
-              onClick={() => setFlipped((f) => !f)}
+              onClick={() => {
+                setFlipped((f) => !f);
+                setHasInteracted(true);
+              }}
             >
               <div className="rounded-3xl border-2 border-primary/20 bg-gradient-to-br from-cyan-50 to-white min-h-48 flex flex-col items-center justify-center gap-3 p-8 shadow-lg">
                 <span className="text-6xl">{currentWord.emoji}</span>
@@ -489,6 +494,19 @@ export function VocabularyModule({ lesson, onComplete }: Props) {
           <div className="text-center text-sm text-muted-foreground">
             {Object.keys(matched).length} / {matchWords.length} matched
           </div>
+          {hasInteracted && (
+            <div className="pt-2 text-center">
+              <Button
+                variant="outline"
+                size="sm"
+                data-ocid="vocab.complete.secondary_button"
+                onClick={() => onComplete(score, matchWords.length)}
+                className="text-muted-foreground text-xs"
+              >
+                Complete with current progress
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>

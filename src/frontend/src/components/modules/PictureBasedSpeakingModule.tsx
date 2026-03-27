@@ -2213,6 +2213,19 @@ export function PictureBasedSpeakingModule({ lesson, onComplete }: Props) {
         </motion.div>
       </AnimatePresence>
 
+      {(submitted || currentIdx > 0) && (
+        <div className="pt-2 text-center">
+          <Button
+            variant="outline"
+            size="sm"
+            data-ocid="picture_speaking.complete.secondary_button"
+            onClick={() => onComplete(totalScore, total * 10)}
+            className="text-muted-foreground text-xs"
+          >
+            Complete with current progress
+          </Button>
+        </div>
+      )}
       <p className="text-xs text-center text-muted-foreground">
         💡 Tip: Use colour words, size words, and action words to score higher!
       </p>

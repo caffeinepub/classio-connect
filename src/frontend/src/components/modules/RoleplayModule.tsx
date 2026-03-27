@@ -388,6 +388,21 @@ export function RoleplayModule({ onComplete }: Props) {
           )}
         </div>
       </div>
+      {exchangeCount >= 1 && !done && (
+        <div className="pt-2 text-center">
+          <Button
+            variant="outline"
+            size="sm"
+            data-ocid="roleplay.complete.secondary_button"
+            onClick={() =>
+              onComplete(Math.round((exchangeCount / 5) * 85), 100)
+            }
+            className="text-muted-foreground text-xs"
+          >
+            Complete with current progress
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

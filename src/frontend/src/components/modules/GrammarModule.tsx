@@ -277,6 +277,7 @@ export function GrammarModule({ lesson, onComplete }: Props) {
   const [selfScore, setSelfScore] = useState(0);
   const [done, setDone] = useState(false);
   const [videoExpanded, setVideoExpanded] = useState(false);
+  const [hasInteracted, setHasInteracted] = useState(false);
 
   const current = lessonItems[exerciseIndex];
   const total = lessonItems.length;
@@ -284,6 +285,7 @@ export function GrammarModule({ lesson, onComplete }: Props) {
   const handleSubmit = () => {
     if (!answer.trim()) return;
     setSubmitted(true);
+    setHasInteracted(true);
   };
 
   const handleSelfEval = (correct: boolean) => {
@@ -453,6 +455,19 @@ export function GrammarModule({ lesson, onComplete }: Props) {
             </Button>
           </div>
         </motion.div>
+      )}
+      {(hasInteracted || exerciseIndex > 0) && (
+        <div className="pt-2 text-center">
+          <Button
+            variant="outline"
+            size="sm"
+            data-ocid="grammar.complete.secondary_button"
+            onClick={() => onComplete(selfScore, total)}
+            className="text-muted-foreground text-xs"
+          >
+            Complete with current progress
+          </Button>
+        </div>
       )}
     </motion.div>
   );
