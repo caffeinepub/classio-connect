@@ -306,7 +306,7 @@ export function RoleSelectPage() {
         className="mb-12 flex flex-col items-center text-center"
       >
         <img
-          src="/assets/uploads/whatsapp_image_2026-03-26_at_21.57.49-019d2de3-2709-728a-a238-de560718a29b-1.jpeg"
+          src="/assets/uploads/classio_logo_reel_compressed-019d30f8-ddb7-741d-bf46-362f4478c78e-1.jpeg"
           alt="Classio Connect"
           className="h-16 w-auto rounded-xl object-contain mb-5"
         />

@@ -643,7 +643,7 @@ export function StudentDashboard() {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-20 bg-white/80 backdrop-blur border-b border-border px-6 py-3 flex items-center justify-between">
         <img
-          src="/assets/uploads/whatsapp_image_2026-03-26_at_21.57.49-019d2de3-2709-728a-a238-de560718a29b-1.jpeg"
+          src="/assets/uploads/classio_logo_reel_compressed-019d30f8-ddb7-741d-bf46-362f4478c78e-1.jpeg"
           alt="Classio"
           className="h-9 w-auto rounded object-contain"
         />
