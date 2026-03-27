@@ -484,12 +484,23 @@ export function ConversationModule({ lesson, onComplete }: Props) {
             </button>
           </div>
 
-          {/* Simple exchange counter — no cap implied */}
+          {/* Exchange counter */}
           <div className="flex items-center justify-center w-full">
             <span className="text-xs text-muted-foreground">
               {exchangeCount} {exchangeCount === 1 ? "exchange" : "exchanges"}
             </span>
           </div>
+
+          {/* Complete Lesson button — always visible once a character is selected */}
+          <Button
+            data-ocid="conversation.complete.primary_button"
+            variant="outline"
+            size="sm"
+            onClick={() => onComplete(Math.max(exchangeCount * 10, 10), 100)}
+            className="w-full text-xs"
+          >
+            Complete Lesson
+          </Button>
         </div>
 
         <div className="flex flex-col border border-border rounded-2xl bg-white overflow-hidden">
@@ -574,26 +585,6 @@ export function ConversationModule({ lesson, onComplete }: Props) {
           </div>
         </div>
       </div>
-
-      {/* Persistent Complete Lesson button — appears after 3 exchanges */}
-      <AnimatePresence>
-        {exchangeCount >= 3 && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 8 }}
-            className="pt-2 text-center"
-          >
-            <Button
-              data-ocid="conversation.complete.primary_button"
-              onClick={() => onComplete(Math.min(exchangeCount, 10), 10)}
-              className="gradient-cyan text-primary-foreground px-8"
-            >
-              Complete Lesson
-            </Button>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
