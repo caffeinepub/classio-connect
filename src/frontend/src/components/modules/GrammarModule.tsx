@@ -27,7 +27,8 @@ const GRAMMAR_LESSONS: Record<number, GrammarLesson[]> = {
         "Write 2 sentences about your daily routine using Present Simple tense.",
       sampleAnswer:
         "I wake up at 7 AM every day. I eat breakfast before going to school.",
-      videoUrl: "https://www.youtube.com/embed/Iu5gMOIKM8s",
+      videoUrl:
+        "https://www.youtube-nocookie.com/embed/Iu5gMOIKM8s?rel=0&modestbranding=1",
       videoTitle: "Present Simple Tense Explained",
     },
     {
@@ -42,7 +43,8 @@ const GRAMMAR_LESSONS: Record<number, GrammarLesson[]> = {
         "Convert to negative: 'He speaks loudly in class.' and 'They visit the park often.'",
       sampleAnswer:
         "He does not speak loudly in class. They do not visit the park often.",
-      videoUrl: "https://www.youtube.com/embed/VkFB5c0wX0g",
+      videoUrl:
+        "https://www.youtube-nocookie.com/embed/VkFB5c0wX0g?rel=0&modestbranding=1",
       videoTitle: "Negative Sentences in English",
     },
   ],
@@ -54,7 +56,8 @@ const GRAMMAR_LESSONS: Record<number, GrammarLesson[]> = {
       question:
         "Fill in: ___ apple a day keeps ___ doctor away. I have ___ umbrella.",
       sampleAnswer: "An apple a day keeps the doctor away. I have an umbrella.",
-      videoUrl: "https://www.youtube.com/embed/KOsO-3nXFEo",
+      videoUrl:
+        "https://www.youtube-nocookie.com/embed/KOsO-3nXFEo?rel=0&modestbranding=1",
       videoTitle: "Articles A, An, The — Full Explanation",
     },
     {
@@ -68,7 +71,8 @@ const GRAMMAR_LESSONS: Record<number, GrammarLesson[]> = {
       question:
         "Convert to questions: 'He speaks English well.' and 'They are playing football.'",
       sampleAnswer: "Does he speak English well? Are they playing football?",
-      videoUrl: "https://www.youtube.com/embed/T9pDsJPDiNE",
+      videoUrl:
+        "https://www.youtube-nocookie.com/embed/T9pDsJPDiNE?rel=0&modestbranding=1",
       videoTitle: "How to Form Questions in English",
     },
   ],
@@ -85,7 +89,8 @@ const GRAMMAR_LESSONS: Record<number, GrammarLesson[]> = {
         "Write 2 sentences about what you did yesterday using Past Simple tense.",
       sampleAnswer:
         "I watched a cricket match yesterday. My family visited our grandmother last Sunday.",
-      videoUrl: "https://www.youtube.com/embed/HGLMlZBGMqU",
+      videoUrl:
+        "https://www.youtube-nocookie.com/embed/HGLMlZBGMqU?rel=0&modestbranding=1",
       videoTitle: "Past Simple Tense — Regular & Irregular Verbs",
     },
     {
@@ -100,7 +105,8 @@ const GRAMMAR_LESSONS: Record<number, GrammarLesson[]> = {
         "Fill in the blanks: 'The children ___ playing outside. The teacher ___ very kind. I ___ at home all day.'",
       sampleAnswer:
         "The children were playing outside. The teacher was very kind. I was at home all day.",
-      videoUrl: "https://www.youtube.com/embed/kJDpGGnfkIM",
+      videoUrl:
+        "https://www.youtube-nocookie.com/embed/kJDpGGnfkIM?rel=0&modestbranding=1",
       videoTitle: "Was and Were — Past Tense of To Be",
     },
   ],
@@ -116,7 +122,8 @@ const GRAMMAR_LESSONS: Record<number, GrammarLesson[]> = {
       question: "Write 2 sentences about your plans for tomorrow using 'will'.",
       sampleAnswer:
         "I will study English tomorrow morning. My friend will come to my house in the evening.",
-      videoUrl: "https://www.youtube.com/embed/IhfFJSMBRmQ",
+      videoUrl:
+        "https://www.youtube-nocookie.com/embed/IhfFJSMBRmQ?rel=0&modestbranding=1",
       videoTitle: "Future Tense with Will — Simple Guide",
     },
     {
@@ -131,7 +138,8 @@ const GRAMMAR_LESSONS: Record<number, GrammarLesson[]> = {
         "Make negative sentences: 'He will come.' → ___. 'They are going to play.' → ___.",
       sampleAnswer:
         "He will not come. / He won't come. They are not going to play.",
-      videoUrl: "https://www.youtube.com/embed/5c5iUYzMafs",
+      videoUrl:
+        "https://www.youtube-nocookie.com/embed/5c5iUYzMafs?rel=0&modestbranding=1",
       videoTitle: "Going To and Future Negatives Explained",
     },
   ],
@@ -148,7 +156,8 @@ const GRAMMAR_LESSONS: Record<number, GrammarLesson[]> = {
         "Fill in: 'The ball is ___ the box. She lives ___ Chennai. The keys are ___ the drawer.'",
       sampleAnswer:
         "The ball is in the box. She lives in Chennai. The keys are in the drawer.",
-      videoUrl: "https://www.youtube.com/embed/f6qiGEbkiY0",
+      videoUrl:
+        "https://www.youtube-nocookie.com/embed/f6qiGEbkiY0?rel=0&modestbranding=1",
       videoTitle: "Prepositions of Place — In, On, At, Under",
     },
     {
@@ -163,7 +172,8 @@ const GRAMMAR_LESSONS: Record<number, GrammarLesson[]> = {
         "Fill in: 'I was born ___ 2012. My birthday is ___ March. School ends ___ 3 PM.'",
       sampleAnswer:
         "I was born in 2012. My birthday is in March. School ends at 3 PM.",
-      videoUrl: "https://www.youtube.com/embed/9P5bSC2nZGc",
+      videoUrl:
+        "https://www.youtube-nocookie.com/embed/9P5bSC2nZGc?rel=0&modestbranding=1",
       videoTitle: "Prepositions of Time — At, On, In",
     },
   ],
@@ -180,7 +190,8 @@ const GRAMMAR_LESSONS: Record<number, GrammarLesson[]> = {
         "Write 2 comparative sentences comparing: 1) a train and a bicycle 2) summer and winter.",
       sampleAnswer:
         "A train is faster than a bicycle. Summer is hotter than winter in most parts of India.",
-      videoUrl: "https://www.youtube.com/embed/1OaBpBH-WNA",
+      videoUrl:
+        "https://www.youtube-nocookie.com/embed/1OaBpBH-WNA?rel=0&modestbranding=1",
       videoTitle: "Adjectives and Comparatives in English",
     },
     {
@@ -195,7 +206,8 @@ const GRAMMAR_LESSONS: Record<number, GrammarLesson[]> = {
         "Write 2 superlative sentences about: 1) an animal you know 2) a place you have visited.",
       sampleAnswer:
         "The cheetah is the fastest animal in the world. Shimla is the most beautiful place I have visited.",
-      videoUrl: "https://www.youtube.com/embed/bsY4FDyiinI",
+      videoUrl:
+        "https://www.youtube-nocookie.com/embed/bsY4FDyiinI?rel=0&modestbranding=1",
       videoTitle: "Superlatives — The Best, The Fastest, The Most",
     },
   ],
@@ -212,7 +224,8 @@ const GRAMMAR_LESSONS: Record<number, GrammarLesson[]> = {
         "Fill in the blanks with the correct modal verb (can/could/should/must): 1) You ___ eat vegetables daily. 2) ___ you help me with this? 3) Students ___ wear uniform to school.",
       sampleAnswer:
         "1) You should eat vegetables daily. 2) Could you help me with this? 3) Students must wear uniform to school.",
-      videoUrl: "https://www.youtube.com/embed/OTOe9PLVXfc",
+      videoUrl:
+        "https://www.youtube-nocookie.com/embed/OTOe9PLVXfc?rel=0&modestbranding=1",
       videoTitle: "Modal Verbs — Can, Could, Should, Must",
     },
     {
@@ -227,7 +240,8 @@ const GRAMMAR_LESSONS: Record<number, GrammarLesson[]> = {
         "Write negative sentences: 1) Use 'must not' for a school rule. 2) Use 'should not' for a health tip. 3) Use 'cannot' for something you are unable to do.",
       sampleAnswer:
         "1) You must not use your phone during class. 2) You should not skip breakfast. 3) I cannot play guitar yet.",
-      videoUrl: "https://www.youtube.com/embed/Ku4ScKbA1bM",
+      videoUrl:
+        "https://www.youtube-nocookie.com/embed/Ku4ScKbA1bM?rel=0&modestbranding=1",
       videoTitle: "Modal Verb Negatives — Can't, Shouldn't, Mustn't",
     },
   ],
@@ -244,7 +258,8 @@ const GRAMMAR_LESSONS: Record<number, GrammarLesson[]> = {
         "Sort these into countable (C) and uncountable (U): apple, water, chair, rice, egg, happiness, book, music.",
       sampleAnswer:
         "Countable: apple, chair, egg, book. Uncountable: water, rice, happiness, music.",
-      videoUrl: "https://www.youtube.com/embed/BUoOxDrZFfI",
+      videoUrl:
+        "https://www.youtube-nocookie.com/embed/BUoOxDrZFfI?rel=0&modestbranding=1",
       videoTitle: "Countable and Uncountable Nouns Explained",
     },
     {
@@ -258,7 +273,8 @@ const GRAMMAR_LESSONS: Record<number, GrammarLesson[]> = {
       question:
         "Replace with possessive pronouns: 1) 'This is my book.' → This book is ___. 2) 'That is their house.' → That house is ___.",
       sampleAnswer: "1) This book is mine. 2) That house is theirs.",
-      videoUrl: "https://www.youtube.com/embed/fxJQiDgn-1g",
+      videoUrl:
+        "https://www.youtube-nocookie.com/embed/fxJQiDgn-1g?rel=0&modestbranding=1",
       videoTitle: "Possessive Pronouns — Mine, Yours, His, Hers",
     },
   ],
@@ -278,6 +294,7 @@ export function GrammarModule({ lesson, onComplete }: Props) {
   const [done, setDone] = useState(false);
   const [videoExpanded, setVideoExpanded] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
+  const [videoError, setVideoError] = useState(false);
 
   const current = lessonItems[exerciseIndex];
   const total = lessonItems.length;
@@ -298,6 +315,7 @@ export function GrammarModule({ lesson, onComplete }: Props) {
       setAnswer("");
       setSubmitted(false);
       setVideoExpanded(false);
+      setVideoError(false);
     }
   };
 
@@ -371,13 +389,41 @@ export function GrammarModule({ lesson, onComplete }: Props) {
                 className="relative w-full"
                 style={{ paddingBottom: "56.25%" }}
               >
-                <iframe
-                  src={current.videoUrl}
-                  title={current.videoTitle}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  className="absolute inset-0 w-full h-full rounded-xl border border-purple-200"
-                />
+                {videoError ? (
+                  <div className="absolute inset-0 flex items-center justify-center rounded-xl border border-purple-200 bg-purple-50">
+                    <div className="text-center space-y-2 p-4">
+                      <p className="text-sm text-purple-700">
+                        Video unavailable in embedded view
+                      </p>
+                      <a
+                        href={
+                          current.videoUrl
+                            ? current.videoUrl
+                                .replace("/embed/", "/watch?v=")
+                                .split("?")[0]
+                                .replace("youtube-nocookie.com", "youtube.com")
+                            : "#"
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors"
+                      >
+                        ▶ Watch on YouTube
+                      </a>
+                    </div>
+                  </div>
+                ) : (
+                  <iframe
+                    src={current.videoUrl}
+                    title={current.videoTitle}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                    referrerPolicy="no-referrer"
+                    sandbox="allow-scripts allow-same-origin allow-presentation allow-popups"
+                    onError={() => setVideoError(true)}
+                    className="absolute inset-0 w-full h-full rounded-xl border border-purple-200"
+                  />
+                )}
               </div>
             </motion.div>
           )}

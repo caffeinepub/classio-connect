@@ -302,7 +302,10 @@ interface Props {
 export function VocabularyModule({ lesson, onComplete }: Props) {
   const clampedLesson = Math.min(Math.max(lesson, 1), 10);
   const words = LESSON_WORDS[clampedLesson] ?? LESSON_WORDS[1];
-  const matchWords = words.slice(0, 4);
+
+  // Shuffle words on mount so each session feels fresh
+  const [shuffledWords] = useState(() => shuffle([...words]));
+  const matchWords = shuffledWords.slice(0, 4);
 
   const [phase, setPhase] = useState<"flashcard" | "match">("flashcard");
   const [cardIndex, setCardIndex] = useState(0);
@@ -318,6 +321,7 @@ export function VocabularyModule({ lesson, onComplete }: Props) {
   const [score, setScore] = useState(0);
   const [done, setDone] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
+  const [completeSaving, setCompleteSaving] = useState(false);
 
   // Pronunciation mic state
   const [isRecording, setIsRecording] = useState(false);
@@ -325,7 +329,7 @@ export function VocabularyModule({ lesson, onComplete }: Props) {
     useState<PronunciationResult | null>(null);
   const recognitionRef = useRef<any>(null);
 
-  const currentWord = words[cardIndex];
+  const currentWord = shuffledWords[cardIndex];
 
   // Clear pronunciation result when card changes
   // biome-ignore lint/correctness/useExhaustiveDependencies: cardIndex is intentionally used as a trigger
@@ -401,7 +405,7 @@ export function VocabularyModule({ lesson, onComplete }: Props) {
   const nextCard = () => {
     setFlipped(false);
     setPronunciationResult(null);
-    if (cardIndex + 1 >= words.length) {
+    if (cardIndex + 1 >= shuffledWords.length) {
       setPhase("match");
     } else {
       setCardIndex((p) => p + 1);
@@ -442,6 +446,13 @@ export function VocabularyModule({ lesson, onComplete }: Props) {
     }
   };
 
+  const handleCompleteLesson = (s: number, total: number) => {
+    setCompleteSaving(true);
+    setTimeout(() => {
+      onComplete(s, total);
+    }, 500);
+  };
+
   if (done) {
     return (
       <motion.div
@@ -459,10 +470,11 @@ export function VocabularyModule({ lesson, onComplete }: Props) {
         </div>
         <Button
           data-ocid="vocab.complete.primary_button"
-          onClick={() => onComplete(score, matchWords.length)}
+          disabled={completeSaving}
+          onClick={() => handleCompleteLesson(score, matchWords.length)}
           className="gradient-cyan text-primary-foreground px-8"
         >
-          Complete Lesson 🎉
+          {completeSaving ? "Saving..." : "Complete Lesson"}
         </Button>
       </motion.div>
     );
@@ -474,7 +486,7 @@ export function VocabularyModule({ lesson, onComplete }: Props) {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              Word {cardIndex + 1} of {words.length}
+              Word {cardIndex + 1} of {shuffledWords.length}
             </p>
             <p className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-full">
               Grade {clampedLesson} Vocabulary
@@ -599,7 +611,7 @@ export function VocabularyModule({ lesson, onComplete }: Props) {
               onClick={nextCard}
               data-ocid="vocab.next.button"
             >
-              {cardIndex + 1 >= words.length
+              {cardIndex + 1 >= shuffledWords.length
                 ? "Start Matching →"
                 : "Next Word →"}
             </Button>
@@ -672,11 +684,12 @@ export function VocabularyModule({ lesson, onComplete }: Props) {
               <Button
                 variant="outline"
                 size="sm"
+                disabled={completeSaving}
                 data-ocid="vocab.complete.secondary_button"
-                onClick={() => onComplete(score, matchWords.length)}
+                onClick={() => handleCompleteLesson(score, matchWords.length)}
                 className="text-muted-foreground text-xs"
               >
-                Complete with current progress
+                {completeSaving ? "Saving..." : "Complete Lesson"}
               </Button>
             </div>
           )}

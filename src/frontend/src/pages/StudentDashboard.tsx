@@ -238,7 +238,18 @@ export function StudentDashboard() {
   const [chatInput, setChatInput] = useState("");
   const [activeTab, setActiveTab] = useState<"modules" | "program">("modules");
   const [reports, setReports] = useState<LocalReport[]>([]);
+  const [completedLessons, setCompletedLessons] = useState<
+    Record<string, number>
+  >({});
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const activeModuleLessonRef = useRef<{
+    module: Module;
+    lesson: number;
+  } | null>(null);
+
+  useEffect(() => {
+    activeModuleLessonRef.current = activeModuleLesson;
+  }, [activeModuleLesson]);
 
   useEffect(() => {
     const role = localStorage.getItem("classio_role");
@@ -263,11 +274,17 @@ export function StudentDashboard() {
         }
 
         const mp: Record<string, number> = {};
+        const cl: Record<string, number> = {};
         for (const m of MODULES) {
           const val = localStorage.getItem(`classio_mod_${sid}_${m.name}`);
           if (val) mp[m.name] = Number(val);
+          const cval = localStorage.getItem(
+            `classio_completed_${sid}_${m.name}`,
+          );
+          if (cval) cl[m.name] = Number(cval);
         }
         setModuleProgress(mp);
+        setCompletedLessons(cl);
 
         const g = localStorage.getItem(`classio_grade_${sid}`);
         if (g) setAssignedGrade(Number(g));
@@ -307,8 +324,8 @@ export function StudentDashboard() {
 
   const handleModuleComplete = useCallback(
     async (score: number, total: number) => {
-      if (!activeModuleLesson) return;
-      const { module, lesson } = activeModuleLesson;
+      if (!activeModuleLessonRef.current) return;
+      const { module, lesson } = activeModuleLessonRef.current;
       const percent = total > 0 ? Math.round((score / total) * 100) : 0;
       const remark = generateRemark(module.name, percent);
 
@@ -405,14 +422,26 @@ export function StudentDashboard() {
           .catch(() => {});
       }
 
+      if (sid) {
+        const newCompleted = {
+          ...completedLessons,
+          [module.name]: (completedLessons[module.name] ?? 0) + 1,
+        };
+        setCompletedLessons(newCompleted);
+        localStorage.setItem(
+          `classio_completed_${sid}_${module.name}`,
+          String(newCompleted[module.name]),
+        );
+      }
+
       setActiveModuleLesson(null);
     },
-    [activeModuleLesson, student, actor, moduleProgress, assignedGrade],
+    [student, actor, moduleProgress, assignedGrade, completedLessons],
   );
 
   const getModuleProgressPercent = (module: Module) => {
-    const done = moduleProgress[module.name] ?? 0;
-    return Math.round((done / module.totalLessons) * 100);
+    const done = completedLessons[module.name] ?? 0;
+    return Math.min(Math.round((done / module.totalLessons) * 100), 100);
   };
 
   const getLevelColor = (level: string) => {

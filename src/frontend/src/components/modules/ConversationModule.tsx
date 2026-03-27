@@ -172,26 +172,6 @@ function detectTopic(msg: string): string | null {
   return null;
 }
 
-function getLexiResponse(
-  userMessage: string,
-  _roleContext: string,
-  history: number,
-): string {
-  const msg = userMessage.toLowerCase().trim();
-
-  if (CHANGE_TOPIC_REGEX.test(msg)) {
-    return "Sure! Which topic would you like to discuss? You can choose from school life, food, sports, travel, weather, hobbies, or anything you like!";
-  }
-
-  const topic = detectTopic(msg);
-  if (topic && TOPIC_RESPONSES[topic]) {
-    const responses = TOPIC_RESPONSES[topic];
-    return responses[history % responses.length];
-  }
-
-  return "That is interesting! Which topic would you like to explore? We can talk about school, family, hobbies, sports, travel, or anything on your mind!";
-}
-
 // Types
 type ChatMsg = {
   id: string;
@@ -252,24 +232,13 @@ export function ConversationModule({ lesson, onComplete }: Props) {
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
   const [exchangeCount, setExchangeCount] = useState(0);
-  const [completed, setCompleted] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
-  const finishRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    if (exchangeCount >= 5 && finishRef.current) {
-      setTimeout(() => {
-        finishRef.current?.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
-      }, 300);
-    }
-  }, [exchangeCount]);
+  // Track last picked response index per topic to avoid repetition
+  const lastPickedRef = useRef<Record<string, number>>({});
 
   const speakText = useCallback(
     (text: string) => {
@@ -290,10 +259,35 @@ export function ConversationModule({ lesson, onComplete }: Props) {
     };
   }, []);
 
+  const getLexiResponse = (
+    userMessage: string,
+    _roleContext: string,
+  ): string => {
+    const msg = userMessage.toLowerCase().trim();
+
+    if (CHANGE_TOPIC_REGEX.test(msg)) {
+      return "Sure! Which topic would you like to discuss? You can choose from school life, food, sports, travel, weather, hobbies, or anything you like!";
+    }
+
+    const topic = detectTopic(msg);
+    if (topic && TOPIC_RESPONSES[topic]) {
+      const responses = TOPIC_RESPONSES[topic];
+      const lastIdx = lastPickedRef.current[topic] ?? -1;
+      // Build list of indices excluding last picked
+      const available = responses.map((_, i) => i).filter((i) => i !== lastIdx);
+      const pool =
+        available.length > 0 ? available : responses.map((_, i) => i);
+      const chosen = pool[Math.floor(Math.random() * pool.length)];
+      lastPickedRef.current[topic] = chosen;
+      return responses[chosen];
+    }
+
+    return "That is interesting! Which topic would you like to explore? We can talk about school, family, hobbies, sports, travel, or anything on your mind!";
+  };
+
   const startWithCharacter = (type: CharacterType) => {
     setSelectedCharacter(type);
-    const greeting =
-      "Hi! I am your English conversation partner. Let us talk! You can choose any topic — school, family, food, sports, travel, hobbies, or anything you like. What would you like to discuss today?";
+    const greeting = "Let's talk! How are you?";
     setMessages([{ id: "init", role: "lexi", text: greeting }]);
     setTimeout(() => speakText(greeting), 300);
   };
@@ -314,11 +308,7 @@ export function ConversationModule({ lesson, onComplete }: Props) {
       });
     }
 
-    const lexiText = getLexiResponse(
-      text.trim(),
-      scenario.roleContext,
-      exchangeCount,
-    );
+    const lexiText = getLexiResponse(text.trim(), scenario.roleContext);
     newMsgs.push({ id: `l-${Date.now() + 2}`, role: "lexi", text: lexiText });
 
     setMessages((p) => [...p, ...newMsgs]);
@@ -369,8 +359,6 @@ export function ConversationModule({ lesson, onComplete }: Props) {
     setIsListening(true);
   };
 
-  const score = Math.min(exchangeCount, 5);
-
   if (!selectedCharacter) {
     return (
       <motion.div
@@ -409,34 +397,6 @@ export function ConversationModule({ lesson, onComplete }: Props) {
         <p className="text-center text-xs text-muted-foreground">
           Adaptive conversation — talk about any topic you choose!
         </p>
-      </motion.div>
-    );
-  }
-
-  if (completed) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="text-center py-12 space-y-4"
-      >
-        <div className="flex justify-center">
-          <AnimatedCharacter type={selectedCharacter} isSpeaking={false} />
-        </div>
-        <h3 className="text-2xl font-bold">Conversation Complete!</h3>
-        <p className="text-muted-foreground">
-          {exchangeCount} exchanges completed
-        </p>
-        <div className="text-4xl font-bold text-primary">
-          {Math.round((score / 5) * 100)}%
-        </div>
-        <Button
-          data-ocid="conversation.complete.primary_button"
-          onClick={() => onComplete(score, 5)}
-          className="gradient-cyan text-primary-foreground px-8"
-        >
-          Complete Lesson
-        </Button>
       </motion.div>
     );
   }
@@ -524,16 +484,11 @@ export function ConversationModule({ lesson, onComplete }: Props) {
             </button>
           </div>
 
-          <div className="flex items-center justify-between w-full text-xs text-muted-foreground">
-            <span>{exchangeCount}/5 exchanges</span>
-            <div className="flex gap-1">
-              {["d1", "d2", "d3", "d4", "d5"].map((dotId, dotIdx) => (
-                <div
-                  key={dotId}
-                  className={`w-2 h-2 rounded-full transition-colors ${dotIdx < exchangeCount ? "bg-primary" : "bg-secondary"}`}
-                />
-              ))}
-            </div>
+          {/* Simple exchange counter — no cap implied */}
+          <div className="flex items-center justify-center w-full">
+            <span className="text-xs text-muted-foreground">
+              {exchangeCount} {exchangeCount === 1 ? "exchange" : "exchanges"}
+            </span>
           </div>
         </div>
 
@@ -620,34 +575,25 @@ export function ConversationModule({ lesson, onComplete }: Props) {
         </div>
       </div>
 
-      {exchangeCount >= 1 && exchangeCount < 5 && (
-        <div className="pt-2 text-center">
-          <Button
-            variant="outline"
-            size="sm"
-            data-ocid="conversation.complete.secondary_button"
-            onClick={() => setCompleted(true)}
-            className="text-muted-foreground text-xs"
+      {/* Persistent Complete Lesson button — appears after 3 exchanges */}
+      <AnimatePresence>
+        {exchangeCount >= 3 && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            className="pt-2 text-center"
           >
-            Complete with current progress
-          </Button>
-        </div>
-      )}
-      {exchangeCount >= 5 && (
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <Button
-            ref={finishRef}
-            data-ocid="conversation.finish.primary_button"
-            onClick={() => setCompleted(true)}
-            className="w-full gradient-cyan text-primary-foreground animate-pulse"
-          >
-            Finish Conversation — Great job! You completed 5 exchanges!
-          </Button>
-        </motion.div>
-      )}
+            <Button
+              data-ocid="conversation.complete.primary_button"
+              onClick={() => onComplete(Math.min(exchangeCount, 10), 10)}
+              className="gradient-cyan text-primary-foreground px-8"
+            >
+              Complete Lesson
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
