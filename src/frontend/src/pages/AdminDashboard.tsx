@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/table";
 import { useNavigate } from "@tanstack/react-router";
 import {
+  ArrowRight,
   Copy,
   GraduationCap,
   LayoutDashboard,
@@ -58,19 +59,40 @@ async function withRetry<T>(
   throw new Error("Unreachable");
 }
 
+function useRelativeTime(ts: Date | null): string {
+  const [label, setLabel] = useState("just now");
+  useEffect(() => {
+    if (!ts) return;
+    const update = () => {
+      const diffMs = Date.now() - ts.getTime();
+      const diffMin = Math.floor(diffMs / 60000);
+      if (diffMin < 1) setLabel("just now");
+      else if (diffMin === 1) setLabel("1 min ago");
+      else setLabel(`${diffMin} min ago`);
+    };
+    update();
+    const id = setInterval(update, 30000);
+    return () => clearInterval(id);
+  }, [ts]);
+  return label;
+}
+
 export function AdminDashboard() {
   const navigate = useNavigate();
   const { actor, isFetching } = useActor();
-  const [activeNav, setActiveNav] = useState<NavItem>("overview");
+  const [activeNav, setActiveNav] = useState<NavItem>("teachers");
   const [teachers, setTeachers] = useState<TeacherRecord[]>([]);
   const [totalStudents, setTotalStudents] = useState(0);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  const [lastLoaded, setLastLoaded] = useState<Date | null>(null);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [newTeacherName, setNewTeacherName] = useState("");
   const [newTeacherEmail, setNewTeacherEmail] = useState("");
   const [isAdding, setIsAdding] = useState(false);
   const [createdTeacherId, setCreatedTeacherId] = useState<string | null>(null);
+
+  const relativeTime = useRelativeTime(lastLoaded);
 
   useEffect(() => {
     const role = localStorage.getItem("classio_role");
@@ -92,6 +114,7 @@ export function AdminDashboard() {
       );
       setTeachers(teacherList || []);
       setTotalStudents((studentList || []).length);
+      setLastLoaded(new Date());
     } catch {
       setLoadError(true);
       toast.error("Could not connect to the server. Please retry.");
@@ -215,7 +238,6 @@ export function AdminDashboard() {
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
           >
-            {/* Desk */}
             <rect
               x="20"
               y="100"
@@ -224,7 +246,6 @@ export function AdminDashboard() {
               rx="4"
               fill="oklch(0.88 0.02 250)"
             />
-            {/* Book stack */}
             <rect
               x="30"
               y="76"
@@ -249,7 +270,6 @@ export function AdminDashboard() {
               rx="2"
               fill="oklch(0.55 0.22 300)"
             />
-            {/* Open book */}
             <path
               d="M75 60 Q80 56 85 60 L85 90 Q80 86 75 90 Z"
               fill="oklch(0.94 0.01 240)"
@@ -270,7 +290,6 @@ export function AdminDashboard() {
               stroke="oklch(0.55 0.2 255)"
               strokeWidth="1"
             />
-            {/* Lines on book */}
             <line
               x1="78"
               y1="70"
@@ -319,7 +338,6 @@ export function AdminDashboard() {
               stroke="oklch(0.75 0.1 255)"
               strokeWidth="1"
             />
-            {/* Graduation cap */}
             <rect
               x="98"
               y="35"
@@ -330,7 +348,6 @@ export function AdminDashboard() {
             />
             <polygon points="114,22 98,35 130,35" fill="oklch(0.45 0.22 270)" />
             <circle cx="114" cy="22" r="4" fill="oklch(0.55 0.2 255)" />
-            {/* Tassel */}
             <line
               x1="130"
               y1="35"
@@ -340,7 +357,6 @@ export function AdminDashboard() {
               strokeWidth="1.5"
             />
             <circle cx="134" cy="52" r="2.5" fill="oklch(0.55 0.22 300)" />
-            {/* Stars */}
             <circle cx="42" cy="30" r="2" fill="oklch(0.65 0.2 50)" />
             <circle cx="55" cy="20" r="1.5" fill="oklch(0.55 0.2 255)" />
             <circle cx="68" cy="32" r="1" fill="oklch(0.55 0.22 300)" />
@@ -370,9 +386,16 @@ export function AdminDashboard() {
                 ? "Dashboard Overview"
                 : "Manage Teachers"}
             </h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Admin • Classio Connect
-            </p>
+            <div className="flex items-center gap-3 mt-0.5">
+              <p className="text-xs text-muted-foreground">
+                Admin • Classio Connect
+              </p>
+              {lastLoaded && (
+                <span className="text-xs text-muted-foreground/60">
+                  Last updated: {relativeTime}
+                </span>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-2">
             {loadError && (
@@ -385,6 +408,21 @@ export function AdminDashboard() {
               >
                 <RefreshCw className="h-3.5 w-3.5" />
                 Retry
+              </Button>
+            )}
+            {activeNav === "teachers" && !loadError && (
+              <Button
+                data-ocid="admin.teachers.refresh.button"
+                size="sm"
+                variant="outline"
+                onClick={() => loadData(actor)}
+                disabled={isLoadingData}
+                className="gap-1.5"
+              >
+                <RefreshCw
+                  className={`h-3.5 w-3.5 ${isLoadingData ? "animate-spin" : ""}`}
+                />
+                Refresh
               </Button>
             )}
             {activeNav === "teachers" && (
@@ -560,6 +598,86 @@ export function AdminDashboard() {
                 </div>
               </div>
 
+              {/* Mini Teacher List */}
+              <div className="card-dark rounded-2xl p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <Users className="h-4 w-4 text-primary" />
+                    Teachers
+                  </h3>
+                  {teachers.length > 0 && (
+                    <button
+                      type="button"
+                      data-ocid="admin.overview.view_all_teachers.button"
+                      onClick={() => setActiveNav("teachers")}
+                      className="text-xs text-primary hover:underline flex items-center gap-1"
+                    >
+                      View all <ArrowRight className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+                {isLoadingData ? (
+                  <div className="flex items-center gap-2 py-4 text-muted-foreground text-sm">
+                    <Loader2 className="h-4 w-4 animate-spin" /> Loading
+                    teachers...
+                  </div>
+                ) : teachers.length === 0 ? (
+                  <div className="text-center py-6">
+                    <p className="text-sm text-muted-foreground mb-3">
+                      No teachers added yet.
+                    </p>
+                    <Button
+                      data-ocid="admin.overview.add_first_teacher.button"
+                      size="sm"
+                      className="gradient-cyan text-primary-foreground"
+                      onClick={() => {
+                        setActiveNav("teachers");
+                        setAddModalOpen(true);
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-1" /> Add your first teacher
+                    </Button>
+                  </div>
+                ) : (
+                  <ul className="space-y-2">
+                    {teachers.slice(0, 5).map((t, i) => (
+                      <li
+                        key={String(t.id)}
+                        data-ocid={`admin.overview.teacher.item.${i + 1}`}
+                        className="flex items-center justify-between py-2.5 px-3 rounded-lg bg-accent/40 hover:bg-accent/60 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center text-primary font-bold text-sm">
+                            {t.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">{t.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {t.email}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-xs font-mono text-primary bg-primary/10 px-2 py-0.5 rounded">
+                          ID: {String(t.id)}
+                        </span>
+                      </li>
+                    ))}
+                    {teachers.length > 5 && (
+                      <li className="text-xs text-center text-muted-foreground pt-1">
+                        +{teachers.length - 5} more —{" "}
+                        <button
+                          type="button"
+                          onClick={() => setActiveNav("teachers")}
+                          className="text-primary hover:underline"
+                        >
+                          view all
+                        </button>
+                      </li>
+                    )}
+                  </ul>
+                )}
+              </div>
+
               <div className="card-dark rounded-2xl p-6">
                 <h3 className="font-semibold mb-4">Quick Actions</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -633,12 +751,23 @@ export function AdminDashboard() {
                 ) : teachers.length === 0 ? (
                   <div
                     data-ocid="admin.teachers.empty_state"
-                    className="text-center py-16"
+                    className="flex flex-col items-center justify-center py-16 gap-3 text-center px-8"
                   >
-                    <span className="text-5xl">👩‍🏫</span>
-                    <p className="mt-4 text-muted-foreground">
-                      No teachers yet. Add your first teacher!
+                    <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-2">
+                      <Users className="h-8 w-8 text-primary/60" />
+                    </div>
+                    <p className="text-lg font-semibold">No teachers found</p>
+                    <p className="text-sm text-muted-foreground max-w-sm">
+                      Teachers added before the last deployment may have been
+                      reset. Add your first teacher to get started.
                     </p>
+                    <Button
+                      data-ocid="admin.teachers.empty.add_teacher.button"
+                      className="mt-2 gradient-cyan text-primary-foreground"
+                      onClick={() => setAddModalOpen(true)}
+                    >
+                      <Plus className="h-4 w-4 mr-1" /> Add Teacher
+                    </Button>
                   </div>
                 ) : (
                   <Table data-ocid="admin.teachers.table">

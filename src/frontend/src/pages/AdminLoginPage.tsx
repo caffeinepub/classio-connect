@@ -37,7 +37,7 @@ export function AdminLoginPage() {
     if (!validate()) return;
     setIsLoading(true);
     await new Promise((r) => setTimeout(r, 400));
-    if (email === "admin@classio.com" && password === "admin123") {
+    if (email === "junae@classio.com" && password === "classio") {
       localStorage.setItem("classio_role", "admin");
       toast.success("Welcome, Admin!");
       navigate({ to: "/admin" });
@@ -191,7 +191,7 @@ export function AdminLoginPage() {
                   id="admin-email"
                   data-ocid="admin.input"
                   type="email"
-                  placeholder="admin@classio.com"
+                  placeholder="junae@classio.com"
                   value={email}
                   onChange={(e) => {
                     setEmail(e.target.value);
@@ -240,10 +240,6 @@ export function AdminLoginPage() {
                 ) : null}
                 {isLoading ? "Signing in..." : "Sign In as Admin"}
               </Button>
-
-              <p className="text-center text-xs text-gray-400 pt-1">
-                Demo credentials: admin@classio.com / admin123
-              </p>
             </form>
           </motion.div>
 

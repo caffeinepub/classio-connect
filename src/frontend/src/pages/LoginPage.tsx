@@ -28,7 +28,7 @@ export function LoginPage() {
 
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (adminEmail === "admin@classio.com" && adminPassword === "admin123") {
+    if (adminEmail === "junae@classio.com" && adminPassword === "classio") {
       localStorage.setItem("classio_role", "admin");
       toast.success("Welcome, Admin!");
       navigate({ to: "/admin" });
@@ -181,7 +181,7 @@ export function LoginPage() {
                   id="admin-email"
                   data-ocid="admin.input"
                   type="email"
-                  placeholder="admin@classio.com"
+                  placeholder="junae@classio.com"
                   value={adminEmail}
                   onChange={(e) => setAdminEmail(e.target.value)}
                   className="bg-secondary border-border focus:border-primary"
@@ -206,9 +206,6 @@ export function LoginPage() {
               >
                 Sign In as Admin
               </Button>
-              <p className="text-center text-xs text-muted-foreground">
-                Demo: admin@classio.com / admin123
-              </p>
             </motion.form>
           )}
 
