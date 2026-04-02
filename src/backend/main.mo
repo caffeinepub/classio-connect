@@ -140,20 +140,15 @@ actor {
 
   // ── Upgrade hooks ────────────────────────────────────────────────────────
   system func preupgrade() {
+    // Snapshot in-memory maps into stable arrays before upgrade
     stableTeachers := teachers.entries().toArray();
     stableStudents := students.entries().toArray();
     stableStudentProgress := studentProgress.entries().toArray();
     stableActivityReports := activityReports.entries().toArray();
   };
 
-  system func postupgrade() {
-    // Maps are already rebuilt in the initializer block above;
-    // clear stable arrays to avoid holding duplicate memory.
-    stableTeachers := [];
-    stableStudents := [];
-    stableStudentProgress := [];
-    stableActivityReports := [];
-  };
+  // NOTE: Do NOT clear stable arrays in postupgrade — the init block above
+  // already reads from them. Clearing here would wipe data on the next upgrade.
 
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
