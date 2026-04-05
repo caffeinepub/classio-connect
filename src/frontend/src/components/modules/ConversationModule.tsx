@@ -276,7 +276,6 @@ function detectTopic(msg: string): string | null {
 
 // ─── Natural Response Engine ──────────────────────────────────────────────────
 
-// Opening lines — rotate naturally
 const OPENING_LINES = [
   "Hey! How are you doing today?",
   "Hi there! What's been on your mind lately?",
@@ -285,263 +284,507 @@ const OPENING_LINES = [
   "Hey, good to see you! What's up?",
 ];
 
-// Casual fillers / acknowledgments to mix in
+// Expanded casual acknowledgments — varied reactions, not just "Oh nice!"
 const CASUAL_ACKS = [
-  "Oh nice!",
-  "That's cool!",
-  "Haha, yeah!",
-  "Interesting!",
   "Oh wow!",
-  "I see!",
-  "Right?",
-  "Yeah totally.",
-  "Nice one!",
+  "That's actually really interesting!",
+  "Wait, seriously?",
+  "No way!",
+  "Haha I can relate.",
+  "That makes a lot of sense.",
+  "Oh I love that.",
+  "I didn't expect that!",
+  "Honestly, same.",
+  "Oh that's cool.",
+  "Ha, nice!",
+  "Right, totally.",
+  "Oh interesting!",
+  "Okay, I get it.",
+  "That's kind of amazing.",
+  "Oh for real?",
+  "Yeah that tracks.",
+  "Hmm, that's a good point.",
+  "Oh nice!",
+  "Haha, yeah!",
 ];
+
+// Pick a fresh unused item from an array; fallback to any random if all used
+function pickFresh(arr: string[], used: Set<string>): string {
+  const unused = arr.filter((s) => !used.has(s));
+  const pool = unused.length > 0 ? unused : arr;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
 
 function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-// Short-answer nudges
-const SHORT_NUDGES = [
-  "Nice! Say more?",
-  "Oh yeah? Like what?",
-  "Really? Tell me more!",
-  "Interesting! Go on...",
-  "Haha, what do you mean exactly?",
-  "Oh cool — how so?",
-  "I'm curious, say more!",
-];
-
-// Fallbacks when nothing matches — never lists topics
-const FALLBACKS = [
-  "Interesting! Tell me more about that.",
-  "Oh yeah? What do you mean exactly?",
-  "That's cool. Go on!",
-  "I'm curious — can you tell me a bit more?",
-  "Haha, really? Explain that!",
-  "Oh wow, I didn't expect that. What's the story?",
-  "Sounds fun! What happened next?",
-];
-
-// Pivot starters when conversation stalls (only after 5+ exchanges with no topic)
-const CASUAL_PIVOTS = [
-  "By the way, what do you usually do after school?",
-  "Hey, what kind of music are you into?",
-  "Random question — what's your favourite food?",
-  "What's something you've been thinking about lately?",
-  "Do you have any hobbies outside school?",
-];
-
-// Per-topic natural response banks — SHORT and varied
-const TOPIC_BANKS: Record<string, string[]> = {
-  school: [
-    "Oh, school! Which subject do you like most?",
-    "Nice! What grade are you in right now?",
-    "Exams coming up? That can be stressful.",
-    "Any teachers you actually enjoy? Like, who makes it fun?",
-    "What's the hardest thing about school for you?",
-    "Is school far from your home?",
-    "Do you have a favourite spot at school — library, canteen?",
-  ],
-  family: [
-    "Nice! Big family or small?",
-    "Sounds sweet. Do you hang out with them on weekends?",
-    "Oh cool! Any siblings?",
-    "What's something your family loves doing together?",
-    "Is there someone in your family you're really close to?",
+// Context-aware short-answer reactions by topic
+const SHORT_TOPIC_REACTIONS: Record<string, string[]> = {
+  sports: [
+    "Oh, cricket! That's such an exciting sport. Do you play in any matches?",
+    "Football? Nice! Do you support a particular team as well?",
+    "Basketball is intense! How long have you been playing?",
+    "Oh you play badminton? I think it's one of the most underrated sports. Do you play competitively?",
+    "Swimming is great for everything — fitness, focus, stress. How often do you go?",
   ],
   food: [
-    "Ooh, food! Homemade or restaurant?",
-    "Nice! Do you cook at all?",
-    "That sounds delicious. What's the last amazing thing you ate?",
-    "Ha, I think I'd love that too. Any favourite snacks?",
-    "What would your perfect meal look like?",
-  ],
-  sports: [
-    "Oh cool! Do you play for a team or just casually?",
-    "Nice! How long have you been playing?",
-    "Who's your favourite player?",
-    "That's a great sport! Do you play with friends or in a club?",
-    "Any memorable match you've played or watched?",
-  ],
-  weather: [
-    "Ugh, tell me about it! What's the weather like where you are?",
-    "Oh nice! What do you usually do on rainy days?",
-    "So are you more of a summer or winter person?",
-    "Does the weather affect your mood much?",
-  ],
-  travel: [
-    "Oh nice, where did you go?",
-    "That sounds fun! How was it?",
-    "Cool! What was the best part of the trip?",
-    "Have you ever been somewhere that really surprised you?",
-    "If you could go anywhere tomorrow, where?",
-  ],
-  hobbies: [
-    "Oh that's fun! How long have you been doing it?",
-    "Nice! What got you into that?",
-    "That sounds chill. Do you do it alone or with friends?",
-    "Have you ever shared your work with anyone?",
-  ],
-  feelings: [
-    "Aw, what's making you feel that way?",
-    "That makes sense. What helps when you feel like that?",
-    "Yeah I get that. What happened?",
-    "Oh, what's got you excited?",
-  ],
-  dreams: [
-    "Oh nice! What made you want that?",
-    "That's a great goal. Are you doing anything towards it?",
-    "Where do you see yourself in a few years?",
-    "What's the first step you'd take?",
-  ],
-  technology: [
-    "Ha, same! What gadget can you absolutely not live without?",
-    "Oh interesting! Have you ever tried coding anything?",
-    "What do you think about AI — cool or a bit scary?",
-    "Do you spend a lot of time online? What do you usually do?",
-    "Any app that you think everyone should use?",
-  ],
-  career: [
-    "Nice goal! What made you want that career?",
-    "That's cool. What skills are you building for it?",
-    "Do you know anyone in that field?",
-    "What does your dream workday look like?",
+    "Pizza! Do you prefer thin crust or the thick loaded kind?",
+    "Biryani is a serious answer. Chicken, mutton, or veg?",
+    "Oh, dosa! Simple or masala?",
+    "Chocolate! Dark or milk? Because that says a lot about a person.",
+    "Noodles — instant or the real deal from a restaurant?",
   ],
   movies: [
-    "Oh nice! What was the last movie you watched?",
-    "Ha, what genre are you into — action, comedy, drama?",
-    "Any movie that actually changed the way you think?",
-    "Bollywood or Hollywood?",
-    "Who's your favourite actor?",
+    "Oh nice genre choice! Any specific film you've watched recently?",
+    "Bollywood or Hollywood — which side do you usually pick?",
+    "Action movies are fun. Any film where the stunts actually blew your mind?",
+    "Comedy is the best. Do you have a go-to comedy movie you rewatch?",
   ],
   music: [
-    "Nice taste! Who do you listen to most?",
-    "Oh, what kind of music puts you in a good mood?",
-    "Do you play any instruments?",
-    "What's that one song you have on repeat right now?",
+    "Oh you listen to that? What kind of song puts you in the best mood?",
+    "Do you actually play any instrument or just enjoy listening?",
+    "What's on your playlist right now — any artist you're obsessed with?",
   ],
-  health: [
-    "Nice! Do you exercise regularly?",
-    "How do you manage stress? Any tricks?",
-    "Are you a morning person or night owl?",
-    "Do you think sleep is underrated? Because I definitely do.",
+  school: [
+    "That subject is tough! What part do you find hardest?",
+    "Oh, you like that class. What makes it interesting for you?",
+    "Exams in that subject can be tricky. How do you usually prepare?",
   ],
-  environment: [
-    "Yeah, it's pretty serious. Do you do anything eco-friendly?",
-    "What's one environmental issue you actually care about?",
-    "Have you noticed any changes in weather where you live?",
+  technology: [
+    "Oh that app! Do you use it daily or just casually?",
+    "That gadget is pretty popular. What do you use it most for?",
+    "Coding is such a powerful skill — have you built anything yet?",
   ],
-  books: [
-    "Oh nice! What's the last book you read?",
-    "Fiction or non-fiction — which do you prefer?",
-    "Any character from a book you really connected with?",
-    "What kind of stories do you like?",
-  ],
-  festivals: [
-    "Oh fun! Which festival is your favourite?",
-    "What's one tradition your family always follows?",
-    "What's the best food from your favourite festival?",
-    "Any memorable celebration that stands out?",
-  ],
-  friendship: [
-    "Aw nice! How did you two meet?",
-    "What's something funny you've done with your friends?",
-    "What do you look for in a friend?",
-    "Have you kept in touch with any childhood friends?",
-  ],
-  money: [
-    "Ha, saving or spending type?",
-    "What are you saving up for right now?",
-    "Do you get pocket money?",
-    "What's the most useful thing you've ever bought?",
-  ],
-  pets: [
-    "Aww! What's their name?",
-    "That's so sweet. How long have you had them?",
-    "I think pets make everything better. Do they?",
-    "What's the funniest thing your pet has ever done?",
+  career: [
+    "That's a great field! What got you interested in it?",
+    "Oh, that career path is competitive but rewarding. Any role models in that field?",
+    "Are you already doing anything to work towards that goal?",
   ],
 };
 
-// Memory-based call-backs — weave in what they said before naturally
-function buildMemoryCallback(memory: SessionMemory): string | null {
+// Generic short-answer nudges with actual content reactions
+const SHORT_NUDGES = [
+  "Oh really? What's that like for you?",
+  "Ha, interesting! What got you into that?",
+  "Wait, tell me more about that!",
+  "Oh yeah? How does that usually go?",
+  "I'm curious — can you say a bit more?",
+  "That's unexpected! What's the story there?",
+  "Haha, what do you mean exactly?",
+];
+
+// Fallbacks — natural, varied, never lists topics
+const FALLBACKS = [
+  "That's interesting — how does it make you feel?",
+  "Oh yeah? What usually happens next?",
+  "I like where this is going. Tell me more!",
+  "That's a take I didn't expect. What's your reasoning?",
+  "Haha, go on!",
+  "Okay I'm listening — explain that a bit more!",
+  "That's kind of a big thing. What do you think about it?",
+  "Sounds like there's a story behind that.",
+];
+
+// Casual pivots when conversation needs a new spark
+const CASUAL_PIVOTS = [
+  "Random thought — what's something you've been thinking about a lot lately?",
+  "Hey, what do you usually do to unwind after a long day?",
+  "What kind of music do you have on when you're doing homework?",
+  "Quick question — if you had a free day tomorrow, what would you do?",
+  "What's one thing you're really good at that most people don't know?",
+  "Do you prefer spending weekends out or staying home?",
+  "What's the last thing that genuinely made you laugh?",
+];
+
+// Topic response banks — expanded to 8-10 entries each, mix of statement+question formats
+const TOPIC_BANKS: Record<string, string[]> = {
+  school: [
+    "Which subject do you like most right now?",
+    "What grade are you in? School life must be pretty busy.",
+    "Exams coming up? That kind of stress is real.",
+    "Any teacher who actually makes lessons fun?",
+    "What's the hardest thing about school for you lately?",
+    "Is school far from your house, or can you walk?",
+    "Do you have a favourite spot there — library, canteen, somewhere else?",
+    "I think a lot of people secretly enjoy school more than they admit. Do you?",
+    "What time do you usually get to school in the morning?",
+    "What's the one subject you'd remove from the timetable if you could?",
+  ],
+  family: [
+    "Big family or small?",
+    "Do you hang out with them much on weekends?",
+    "Any siblings? Are you close with them?",
+    "What's something your family loves doing all together?",
+    "Is there one person in your family you really look up to?",
+    "Families are funny — any running joke or tradition you have at home?",
+    "Who's the best cook in your house?",
+    "Do you think family shapes who you become? Because I do.",
+  ],
+  food: [
+    "Homemade or restaurant — which do you prefer honestly?",
+    "Do you cook anything yourself?",
+    "What's the last truly amazing thing you ate?",
+    "Any favourite snacks you always keep around?",
+    "What would your perfect meal look like?",
+    "I think food is one of the best ways to know someone's culture. What's a dish that's very 'you'?",
+    "Is there a food you used to hate as a kid but love now?",
+    "Street food or proper sit-down restaurant — which wins for you?",
+  ],
+  sports: [
+    "Do you play for a team or just casually?",
+    "How long have you been into that sport?",
+    "Who's your favourite player to watch?",
+    "Do you play with friends or in a club?",
+    "Any memorable match you've played or watched recently?",
+    "I actually think sport teaches discipline more than almost anything. Would you agree?",
+    "What's the most exciting moment you've had playing or watching?",
+    "Does it ever get stressful in a match, or do you zone in?",
+    "Would you ever want to play professionally, or is it just for fun?",
+    "What's something about that sport that most people don't appreciate?",
+  ],
+  weather: [
+    "What's the weather like where you are right now?",
+    "What do you usually do on rainy days?",
+    "Are you more of a summer or winter person?",
+    "Does the weather actually affect your mood?",
+    "Hot weather is energising or exhausting — which is it for you?",
+    "Any weather that you secretly enjoy even if it's inconvenient?",
+  ],
+  travel: [
+    "Where did you go? How was it?",
+    "What was the best part of the trip?",
+    "Has a place ever genuinely surprised you — like it was totally different from what you expected?",
+    "If you could go anywhere tomorrow with no cost, where?",
+    "Do you prefer cities or nature when you travel?",
+    "Travelling solo or with people — which would you choose?",
+    "What's a place you'd love to visit someday and why?",
+    "Have you ever been somewhere that changed how you think a little?",
+  ],
+  hobbies: [
+    "How long have you been doing that?",
+    "What got you into it in the first place?",
+    "Is it something you do alone or with others?",
+    "Have you ever shared your work or progress with anyone?",
+    "Is it something you could see yourself doing long-term?",
+    "Do you have a goal with it, or is it purely for enjoyment?",
+    "What's the hardest part of learning it?",
+    "Has that hobby ever surprised you — like shown you something about yourself?",
+  ],
+  feelings: [
+    "What's making you feel that way?",
+    "That makes sense. What usually helps you when you feel like that?",
+    "Yeah, I get it. What happened?",
+    "It's okay to feel that. What do you usually do with that energy?",
+    "What would make today feel better?",
+    "Do you usually talk to someone when you're feeling low, or keep it in?",
+  ],
+  dreams: [
+    "What made you want that in the first place?",
+    "That's a great goal. Are you doing anything towards it right now?",
+    "Where do you see yourself in five years?",
+    "What's the first step you'd take if you started tomorrow?",
+    "Have you talked to anyone already doing that thing you want to do?",
+    "Dreams are easy — plans are harder. Do you have a plan?",
+    "What's the biggest obstacle standing between you and that dream?",
+    "If success was guaranteed, would you still choose the same dream?",
+  ],
+  technology: [
+    "What gadget can you absolutely not live without?",
+    "Have you ever tried coding anything, even something small?",
+    "What do you actually think about AI — exciting, or a bit worrying?",
+    "How much time are you online daily? What do you mostly do?",
+    "Any app you think genuinely makes life better?",
+    "Do you think people are too addicted to their phones? Be honest.",
+    "What's one piece of tech you wish existed but doesn't yet?",
+    "If you had to give up one piece of tech for a month, what would hurt least?",
+    "Social media — does it make you feel connected or just more distracted?",
+    "Do you think screen time is overrated as an issue, or is it genuinely a problem?",
+  ],
+  career: [
+    "What made you want that career?",
+    "What skills are you building for it right now?",
+    "Do you know anyone who's actually in that field?",
+    "What does your dream workday look like in that job?",
+    "Is it something you'd love even if it paid less?",
+    "What's the hardest thing about getting into that career?",
+    "Have you ever shadowed someone or done anything related to it yet?",
+    "What does success look like to you — money, impact, freedom, or something else?",
+  ],
+  movies: [
+    "What was the last movie you watched?",
+    "What genre are you usually into — action, comedy, drama?",
+    "Any movie that actually changed the way you think?",
+    "Bollywood or Hollywood — which side do you pick?",
+    "Who's your favourite actor right now?",
+    "Is there a movie you can rewatch over and over without getting bored?",
+    "Do you prefer watching alone or with others?",
+    "What kind of ending do you prefer — happy, realistic, or open?",
+    "Any underrated film you think more people should watch?",
+    "Do you ever cry in movies? What kind gets you?",
+  ],
+  music: [
+    "Who do you listen to most right now?",
+    "What kind of music puts you in a good mood?",
+    "Do you play any instruments, or just enjoy listening?",
+    "What's one song you've had on repeat recently?",
+    "Do you listen to lyrics or just vibe to the sound?",
+    "Is there a song that means something specific to you?",
+    "Concerts — have you ever been to one? Would you want to go?",
+    "Do you think music taste says a lot about a person?",
+    "What's one artist you think everyone should know about?",
+  ],
+  health: [
+    "Do you exercise regularly, or is it more on and off?",
+    "How do you manage stress — any tricks that actually work?",
+    "Are you a morning person or night owl? Be honest.",
+    "Sleep is honestly underrated. How much do you usually get?",
+    "Do you think mental health gets enough attention at school?",
+    "Is there one healthy habit you've actually managed to stick with?",
+    "What does your diet look like — do you think about it much?",
+    "Do you think fitness is more about the body or the mind?",
+  ],
+  environment: [
+    "Do you do anything eco-friendly in your daily life?",
+    "What environmental issue actually worries you the most?",
+    "Have you noticed any weather changes where you live compared to a few years ago?",
+    "Do you think individual choices matter, or is it mostly up to governments and companies?",
+    "Is there one small change everyone could make that would actually help?",
+    "Do you think your generation will handle the environment better than previous ones?",
+  ],
+  books: [
+    "What's the last book you read — and was it worth it?",
+    "Fiction or non-fiction — which do you prefer?",
+    "Any character from a book you really connected with?",
+    "What kind of stories pull you in the most?",
+    "Is there a book you'd recommend to literally everyone?",
+    "Do you prefer reading at night or during the day?",
+    "Do you think reading is underrated as a skill now that everything is video?",
+    "What's a book that made you think differently about something?",
+  ],
+  festivals: [
+    "Which festival is your absolute favourite?",
+    "What's one tradition your family always follows at that time?",
+    "Best food from your favourite festival — what is it?",
+    "Any memorable celebration that really stands out?",
+    "Do you like the commercial side of festivals, or do you prefer the meaning behind them?",
+    "Is there a festival you'd love to experience from a different culture?",
+    "What's the best part — the food, the atmosphere, or the people?",
+  ],
+  friendship: [
+    "How did you two meet?",
+    "What's something funny or memorable you've done with your friends?",
+    "What do you actually look for in a friend?",
+    "Have you kept in touch with any childhood friends?",
+    "Do you think it's easier to make friends online or in person now?",
+    "What's the most important thing in a friendship — honesty, loyalty, or just fun?",
+    "Is there a friend who's genuinely changed how you see things?",
+    "Do you think you're a good friend? What makes you say that?",
+  ],
+  money: [
+    "Saving or spending type — which are you honestly?",
+    "What are you saving up for right now, if anything?",
+    "Do you get pocket money? How do you usually use it?",
+    "What's the most useful thing you've ever spent money on?",
+    "Do you think financial education should be taught in school?",
+    "What's something you'd never spend money on that others do?",
+    "If you got a large amount of money tomorrow, what's the first thing you'd do?",
+  ],
+  pets: [
+    "Aww! What's their name?",
+    "How long have you had them?",
+    "Pets genuinely seem to help with stress. Is that true for you?",
+    "What's the funniest thing your pet has ever done?",
+    "Do they have any weird habits?",
+    "Has having a pet changed how you think about animals generally?",
+    "What do they do all day when you're not home?",
+  ],
+};
+
+// Deep-dive questions per topic — for when same topic continues 3+ exchanges
+const TOPIC_DEEP_DIVES: Record<string, string[]> = {
+  school: [
+    "What's something about school that people your age complain about but you actually think is important?",
+    "If you could redesign your school schedule, what would a perfect learning day look like?",
+    "Has a teacher ever said something that genuinely changed how you think?",
+  ],
+  sports: [
+    "What do you think sport teaches people that you can't learn in a classroom?",
+    "Has there been a time in sport where you had to push through something really hard?",
+    "Do you think competing at a higher level would make it less fun, or more exciting?",
+  ],
+  technology: [
+    "Do you think AI will take over jobs in the area you're interested in?",
+    "If you had the skills to build any app, what problem would you solve?",
+    "What do you think the internet has taken away that we don't talk about enough?",
+  ],
+  music: [
+    "If your life had a soundtrack right now, what song would be playing?",
+    "Do you think music affects how you perform at things — studying, working out?",
+    "Is there a type of music you pretend not to like but actually enjoy?",
+  ],
+  movies: [
+    "If your life was a movie, what genre would it be?",
+    "Do you think movies reflect reality, or do they distort what we expect from life?",
+    "What's a movie that stuck with you weeks after you watched it?",
+  ],
+  career: [
+    "Do you think passion or stability is more important when choosing a career?",
+    "Is there a backup plan if your first career choice doesn't work out?",
+    "What does your ideal work-life balance look like?",
+  ],
+  friendship: [
+    "Have you ever had to end a friendship? How do you handle that?",
+    "What's the difference between someone who's a friend and someone who's just an acquaintance?",
+    "Is it possible to have a really deep friendship online with someone you've never met?",
+  ],
+  food: [
+    "Do you think food is more about nourishment or pleasure for you?",
+    "Is there a food memory — like a meal that takes you back to something specific?",
+    "Would you rather be an amazing cook or have someone always cook amazing food for you?",
+  ],
+};
+
+// Direct follow-ups when the user answers a specific AI question
+const DIRECT_FOLLOW_UPS: Record<string, string[]> = {
+  sport_asked: [
+    "That's great! Have you played in any competitions or was it just casual so far?",
+    "Oh nice — do you think sport teaches you things that school doesn't?",
+    "How often do you actually practice? Daily, or when you get the chance?",
+    "Do you have a team you play with, or is it mostly solo training?",
+  ],
+  food_asked: [
+    "Solid choice! Do you make it yourself or do you always order/buy it?",
+    "Is that something you eat often, or more of a special occasion thing?",
+    "Who in your life makes the best version of that?",
+    "Would you say that's your comfort food — the thing you go to when you need cheering up?",
+  ],
+  career_asked: [
+    "That's a big goal — what specifically made you want that?",
+    "Are you already doing anything to work towards it, or is it more of a long-term idea?",
+    "Do you know anyone in that field you could learn from?",
+    "What's the part of that career that excites you most?",
+  ],
+  hobby_asked: [
+    "How did you first get into that?",
+    "Do you do it alone or is it something you share with others?",
+    "Have you ever shared what you made or done with anyone outside your circle?",
+    "Is there a level you're working towards with it?",
+  ],
+  place_asked: [
+    "What do you like most about living there?",
+    "Is it a place most people would know, or more of a hidden gem?",
+    "Has living there shaped how you think about things?",
+    "If you could live anywhere else, would you — or would you stay?",
+  ],
+  subject_asked: [
+    "What is it about that subject that clicks for you?",
+    "Is it the teacher, the content, or both?",
+    "Do you think you'll use it after school?",
+  ],
+  general_answered: [
+    "That's a really honest answer. What made you think of it that way?",
+    "Interesting perspective — has that always been your view or did something change it?",
+    "I like that answer. Is there something behind it?",
+    "That's a solid take. Would you say that's something you care a lot about?",
+  ],
+};
+
+// Memory-based call-backs — weave in what they said before
+function buildMemoryCallback(
+  memory: SessionMemory,
+  used: Set<string>,
+): string | null {
   const callbacks: string[] = [];
   if (memory.sport)
     callbacks.push(
-      `Wait — you play ${memory.sport} right? Do you practice every day?`,
+      `Wait — you play ${memory.sport}, right? How's that been going lately?`,
     );
   if (memory.food)
     callbacks.push(
-      `Oh by the way, earlier you mentioned ${memory.food}. Homemade or do you order it?`,
+      `Oh, earlier you mentioned ${memory.food}. Is that like your go-to comfort food?`,
     );
   if (memory.job_dream)
     callbacks.push(
-      `Didn't you say you want to be a ${memory.job_dream}? That's such a cool goal.`,
+      `You said you want to be a ${memory.job_dream} — has that always been the dream or is it new?`,
     );
   if (memory.hobby)
     callbacks.push(
-      `You mentioned you enjoy ${memory.hobby} — how's that going lately?`,
+      `You mentioned enjoying ${memory.hobby} — any recent progress or something cool you made?`,
     );
   if (memory.place)
     callbacks.push(
-      `Oh yeah, you're from ${memory.place} — what do you like most about it?`,
+      `Oh yeah, you're from ${memory.place} — has that place shaped you in any way?`,
     );
   if (memory.subject)
     callbacks.push(
-      `You said ${memory.subject} is your favourite subject — why that one?`,
+      `You said ${memory.subject} is your favourite subject — do you think you'll use it later in life?`,
     );
   if (memory.pet)
-    callbacks.push(`How's your ${memory.pet} doing? They must keep you busy!`);
+    callbacks.push(
+      `How's your ${memory.pet} doing? They must keep things lively at home!`,
+    );
   if (callbacks.length === 0) return null;
-  return pick(callbacks);
+  const fresh = callbacks.filter((c) => !used.has(c));
+  const pool = fresh.length > 0 ? fresh : callbacks;
+  return pick(pool);
 }
 
-// Fact acknowledgments — short and natural
+// Fact acknowledgments — short, natural, varied
 const FACT_ACKS: Record<string, (v: string) => string> = {
   sport: (v) =>
-    pick([
-      `Oh, ${v}! Do you play for a team or just for fun?`,
-      `Nice! How long have you been playing ${v}?`,
-      `${v.charAt(0).toUpperCase() + v.slice(1)}? Are you pretty good at it?`,
-    ]),
+    pickFresh(
+      [
+        `Oh, ${v}! Do you play for a team or just for fun?`,
+        `Nice! How long have you been playing ${v}?`,
+        `${v.charAt(0).toUpperCase() + v.slice(1)}? Are you actually pretty good at it?`,
+        `${v} is great! Do you find it helps with focus or stress?",`,
+      ],
+      new Set(),
+    ),
   job_dream: (v) =>
     pick([
-      `A ${v}? That's awesome! What made you choose that?`,
-      `Oh wow, a ${v}! What's the most exciting part about that career?`,
-      `Nice goal! Are you already doing anything to work towards being a ${v}?`,
+      `A ${v}? That's a solid goal — what made you choose that?`,
+      `Oh wow, ${v}! What part of that career excites you most?`,
+      `Nice! Are you already doing anything to work towards being a ${v}?`,
+      `${v.charAt(0).toUpperCase() + v.slice(1)} — that's ambitious. What's your plan to get there?`,
     ]),
   hobby: (v) =>
     pick([
       `Oh, ${v}? How long have you been doing that?`,
-      `Nice! What got you into ${v}?`,
-      `That's fun! Do you do ${v} alone or with others?`,
+      `Nice! What got you into ${v} in the first place?`,
+      `That sounds fun — do you do ${v} alone or with others?`,
+      `${v.charAt(0).toUpperCase() + v.slice(1)} is a great hobby. Has it ever surprised you with how good it feels?`,
     ]),
   food: (v) =>
     pick([
-      `${v.charAt(0).toUpperCase() + v.slice(1)}! Homemade or restaurant?`,
-      `Ooh, ${v}! Who makes the best one you've had?`,
+      `${v.charAt(0).toUpperCase() + v.slice(1)}! Homemade or from a restaurant?`,
+      `Ooh, ${v}! Who makes the best one you've ever had?`,
+      `${v} is a solid choice. Is it a regular thing or more of a treat?`,
     ]),
   place: (v) =>
     pick([
       `Oh, ${v}! What's your favourite thing about it?`,
-      `Nice! Have you always lived in ${v}?`,
+      `Nice! Have you always lived in ${v}, or did you move there?`,
+      `${v} — is it a place most people would know?`,
     ]),
   subject: (v) =>
     pick([
-      `${v.charAt(0).toUpperCase() + v.slice(1)}! What do you love about it?`,
-      `Oh interesting — why ${v} specifically?`,
+      `${v.charAt(0).toUpperCase() + v.slice(1)}! What do you love about it specifically?`,
+      `Oh interesting — why ${v}? Is it the content or the way it's taught?`,
+      `That's a great subject. Do you think you'll use it after school?`,
     ]),
   name: (v) =>
     pick([
-      `Nice to meet you, ${v}! So what's on your mind today?`,
-      `Hey ${v}! Cool name. Where are you from?`,
+      `Nice to meet you, ${v}! So what's been on your mind lately?`,
+      `Hey ${v}! Love the name. Where are you from?`,
+      `${v}! Great. So tell me — what's something you're into right now?`,
     ]),
   pet: (v) =>
     pick([
       `A ${v}! What's their name?`,
-      `Oh that's adorable! What does your ${v} do all day?`,
+      `Oh that's adorable — what does your ${v} do all day while you're at school?`,
+      `${v.charAt(0).toUpperCase() + v.slice(1)}s are the best. Does yours have any funny quirks?`,
     ]),
 };
 
@@ -553,6 +796,9 @@ function generateReply(
   exchangeCount: number,
   newFact: { key: string; value: string } | null,
   lastTopicRef: { topic: string | null; count: number },
+  usedReplies: Set<string>,
+  lastAIQuestion: string | null,
+  milestonesFired: Set<number>,
 ): string {
   const msg = userMsg.trim();
   const words = msg.split(/\s+/).length;
@@ -560,94 +806,220 @@ function generateReply(
   const isShort = words <= 7;
   const lower = msg.toLowerCase();
 
-  // Very short one-word or yes/no replies — gentle nudge
+  // Emit reply, mark used
+  function emit(text: string): string {
+    usedReplies.add(text);
+    return text;
+  }
+
+  // ── Milestone celebrations (fire once per milestone) ──
+  if (exchangeCount === 5 && !milestonesFired.has(5)) {
+    milestonesFired.add(5);
+    return emit(
+      "Hey, we've been chatting for a bit — you're doing really well! Keep going.",
+    );
+  }
+  if (exchangeCount === 10 && !milestonesFired.has(10)) {
+    milestonesFired.add(10);
+    return emit(
+      "10 exchanges! You're really opening up — I love how natural this feels now.",
+    );
+  }
+  if (exchangeCount === 20 && !milestonesFired.has(20)) {
+    milestonesFired.add(20);
+    return emit(
+      "Wow, 20 exchanges! Honestly, you're basically a pro at this now. What else is on your mind?",
+    );
+  }
+
+  // ── Detect if user is answering the last AI question directly ──
+  if (lastAIQuestion) {
+    const lq = lastAIQuestion.toLowerCase();
+    let followUpPool: string[] | null = null;
+
+    if (/sport|play|team|cricket|football/i.test(lq)) {
+      // Check if user gave a sport name answer
+      if (
+        /cricket|football|soccer|basketball|badminton|tennis|swimming|volleyball/i.test(
+          lower,
+        )
+      ) {
+        const sportName = lower.match(
+          /cricket|football|soccer|basketball|badminton|tennis|swimming|volleyball/i,
+        )?.[0];
+        if (sportName) {
+          const reactions = SHORT_TOPIC_REACTIONS.sports;
+          return emit(
+            pickFresh(
+              reactions.filter((r) =>
+                r.toLowerCase().includes(sportName.toLowerCase()),
+              ).length > 0
+                ? reactions.filter((r) =>
+                    r.toLowerCase().includes(sportName.toLowerCase()),
+                  )
+                : reactions,
+              usedReplies,
+            ),
+          );
+        }
+      }
+      followUpPool = DIRECT_FOLLOW_UPS.sport_asked;
+    } else if (/food|eat|meal|snack|favourite.*food/i.test(lq)) {
+      // User answered with a food name
+      const foodKeywords = [
+        "pizza",
+        "biryani",
+        "rice",
+        "noodles",
+        "dosa",
+        "burger",
+        "chocolate",
+        "ice cream",
+        "roti",
+        "curry",
+        "pasta",
+      ];
+      const matchedFood = foodKeywords.find((f) => lower.includes(f));
+      if (matchedFood) {
+        const reactions = SHORT_TOPIC_REACTIONS.food.filter((r) =>
+          r.toLowerCase().includes(matchedFood),
+        );
+        if (reactions.length > 0) {
+          return emit(pickFresh(reactions, usedReplies));
+        }
+      }
+      followUpPool = DIRECT_FOLLOW_UPS.food_asked;
+    } else if (/career|job|dream|want to be|profession/i.test(lq)) {
+      followUpPool = DIRECT_FOLLOW_UPS.career_asked;
+    } else if (/hobby|do.*free time|enjoy|into/i.test(lq)) {
+      followUpPool = DIRECT_FOLLOW_UPS.hobby_asked;
+    } else if (/live|from|place|city|town/i.test(lq)) {
+      followUpPool = DIRECT_FOLLOW_UPS.place_asked;
+    } else if (/subject|class|lesson|favourite.*subject/i.test(lq)) {
+      followUpPool = DIRECT_FOLLOW_UPS.subject_asked;
+    }
+
+    // If we found a relevant follow-up pool for the last question
+    if (followUpPool && words >= 1) {
+      return emit(pickFresh(followUpPool, usedReplies));
+    }
+  }
+
+  // ── Very short one-word / yes-no replies — react to content if possible ──
   if (isVeryShort) {
-    // Check if it's a yes/no
     if (
       /^(yes|yeah|yep|yup|sure|okay|ok|no|nope|nah|maybe|hmm|hm|oh)$/i.test(msg)
     ) {
-      return pick([
-        "Haha yeah! What else is on your mind?",
-        "Nice! Tell me more about that.",
-        "Oh interesting! What do you mean?",
-        "Right? So what do you usually do about it?",
-        "Ha, go on then!",
-      ]);
+      return emit(
+        pickFresh(
+          [
+            "Ha, fair enough! What's on your mind right now?",
+            "Haha — say more!",
+            "Oh interesting! What do you mean by that?",
+            "Right? So what do you usually do about it?",
+            "Go on then!",
+          ],
+          usedReplies,
+        ),
+      );
     }
     if (
       /^(good|fine|great|awesome|amazing|nice|cool|bad|okay|alright)$/i.test(
         msg,
       )
     ) {
-      return pick([
-        "Nice! What's making it good?",
-        "Cool, what's been happening?",
-        "Oh yeah? Tell me more!",
-        "Haha, say more!",
-      ]);
+      return emit(
+        pickFresh(
+          [
+            "Nice — what's been making it good?",
+            "Cool! What's been happening today?",
+            "Oh yeah? What are you up to?",
+            "Ha, tell me more about that!",
+          ],
+          usedReplies,
+        ),
+      );
     }
-    return pick(SHORT_NUDGES);
+
+    // Check if the short answer is a sport/food/topic that we can react to specifically
+    const detectedTopic = detectTopic(msg);
+    if (detectedTopic && SHORT_TOPIC_REACTIONS[detectedTopic]) {
+      return emit(pickFresh(SHORT_TOPIC_REACTIONS[detectedTopic], usedReplies));
+    }
+    return emit(pickFresh(SHORT_NUDGES, usedReplies));
   }
 
-  // Greetings
+  // ── Greetings ──
   if (
     /^(hi|hello|hey|good morning|good afternoon|good evening|howdy)\b/i.test(
       msg,
     )
   ) {
-    if (memory.name)
-      return `Hey ${memory.name}! Good to hear from you. What's up?`;
-    return pick([
-      "Hey! How's your day been so far?",
-      "Hi! What's going on?",
-      "Hey! Been up to anything interesting?",
-    ]);
+    if (memory.name) {
+      return emit(`Hey ${memory.name}! Good to hear from you. What's up?`);
+    }
+    return emit(
+      pickFresh(
+        [
+          "Hey! How's your day been so far?",
+          "Hi! What's going on with you?",
+          "Hey! Been up to anything interesting lately?",
+        ],
+        usedReplies,
+      ),
+    );
   }
 
-  // Positive feelings
+  // ── Positive feelings ──
   if (
     /\b(happy|excited|great|awesome|amazing|wonderful|fantastic|love|enjoying)\b/i.test(
       lower,
     )
   ) {
-    const ack = pick(CASUAL_ACKS);
+    const ack = pickFresh(CASUAL_ACKS, usedReplies);
     const topic = detectTopic(msg);
     if (topic && TOPIC_BANKS[topic]) {
-      return `${ack} ${pick(TOPIC_BANKS[topic])}`;
+      return emit(`${ack} ${pickFresh(TOPIC_BANKS[topic], usedReplies)}`);
     }
-    return `${ack} What's making you feel that way?`;
+    return emit(`${ack} What's making you feel that way?`);
   }
 
-  // Negative feelings
+  // ── Negative feelings ──
   if (
     /\b(tired|bored|sad|stressed|nervous|worried|bad|terrible|awful|hate|annoyed)\b/i.test(
       lower,
     )
   ) {
-    return pick([
-      "Aw, what's going on?",
-      "That sounds rough. What happened?",
-      "Oh no! What's bothering you?",
-      "I get that. What usually helps when you feel like that?",
-    ]);
+    return emit(
+      pickFresh(
+        [
+          "Aw, what's going on?",
+          "That sounds rough. What happened?",
+          "Oh no — what's bothering you?",
+          "I get that. What usually helps when you feel like that?",
+          "That's valid. Do you want to talk about it or distract yourself?",
+        ],
+        usedReplies,
+      ),
+    );
   }
 
-  // New fact discovered — react naturally
+  // ── New fact discovered — react naturally ──
   if (newFact && FACT_ACKS[newFact.key]) {
-    return FACT_ACKS[newFact.key](newFact.value);
+    return emit(FACT_ACKS[newFact.key](newFact.value));
   }
 
-  // Every 5th exchange after 4 — recall something they said (50% chance)
+  // ── Memory recall every ~5 exchanges (not too often) ──
   if (
     exchangeCount > 4 &&
     exchangeCount % 5 === 0 &&
     memory.mentionedFacts.length >= 2
   ) {
-    const recall = buildMemoryCallback(memory);
-    if (recall) return recall;
+    const recall = buildMemoryCallback(memory, usedReplies);
+    if (recall) return emit(recall);
   }
 
-  // Detect topic and respond
+  // ── Detect topic and build a contextual response ──
   const topic = detectTopic(msg);
   if (topic) {
     // Update streak
@@ -657,32 +1029,58 @@ function generateReply(
       lastTopicRef.topic = topic;
       lastTopicRef.count = 1;
     }
-    // Use memory context
+
+    // Deep-dive responses when on same topic for 3+ exchanges
+    if (lastTopicRef.count >= 3 && TOPIC_DEEP_DIVES[topic]) {
+      return emit(pickFresh(TOPIC_DEEP_DIVES[topic], usedReplies));
+    }
+
+    // Memory-contextual responses
     if (topic === "career" && memory.job_dream) {
-      return pick([
-        `Since you want to be a ${memory.job_dream} — what's the hardest part about getting there?`,
-        `Cool! Are you working on any skills for your ${memory.job_dream} career?`,
-      ]);
+      return emit(
+        pickFresh(
+          [
+            `Since you want to be a ${memory.job_dream} — what's the hardest part about getting there?`,
+            `Are you working on any skills specifically for your ${memory.job_dream} career?`,
+            `When did you first decide you wanted to be a ${memory.job_dream}?`,
+          ],
+          usedReplies,
+        ),
+      );
     }
     if (topic === "school" && memory.grade) {
-      return pick([
-        `Class ${memory.grade} is intense! Which part is hardest right now?`,
-        `Oh right, you're in class ${memory.grade}. Any subjects you actually enjoy?`,
-      ]);
+      return emit(
+        pickFresh(
+          [
+            `Class ${memory.grade} keeps you busy — which part is hardest right now?`,
+            `Oh right, you're in class ${memory.grade}. Any subjects you actually look forward to?`,
+            `How are things going in class ${memory.grade} overall?`,
+          ],
+          usedReplies,
+        ),
+      );
     }
     if (topic === "sports" && memory.sport) {
-      return pick([
-        `Oh nice, ${memory.sport} again! Are you getting better at it?`,
-        `Ha, you really love ${memory.sport}. Have you played any matches lately?`,
-      ]);
+      return emit(
+        pickFresh(
+          [
+            `Oh nice, ${memory.sport} again! Are you getting better at it?`,
+            `Ha, you really love ${memory.sport}. Had any good matches lately?`,
+            `${memory.sport.charAt(0).toUpperCase() + memory.sport.slice(1)} keeps coming up — there must be something you really love about it?`,
+          ],
+          usedReplies,
+        ),
+      );
     }
+
     if (TOPIC_BANKS[topic]) {
-      const resp = pick(TOPIC_BANKS[topic]);
-      // Occasionally add a casual ack before the question
-      if (Math.random() > 0.5 && !isShort) {
-        return `${pick(CASUAL_ACKS)} ${resp}`;
+      const resp = pickFresh(TOPIC_BANKS[topic], usedReplies);
+      // Add a casual acknowledgment before the response ~40% of the time (only on longer messages)
+      if (Math.random() > 0.6 && !isShort) {
+        const ack = pickFresh(CASUAL_ACKS, usedReplies);
+        return emit(`${ack} ${resp}`);
       }
-      return resp;
+      return emit(resp);
     }
   } else {
     // No topic matched — reset streak
@@ -690,12 +1088,17 @@ function generateReply(
     lastTopicRef.count = 0;
   }
 
-  // If the conversation has stalled — offer a casual pivot
-  if (exchangeCount > 6 && !topic) {
-    return pick(CASUAL_PIVOTS);
+  // ── General answered follow-up if there was a last question ──
+  if (lastAIQuestion && !isVeryShort) {
+    return emit(pickFresh(DIRECT_FOLLOW_UPS.general_answered, usedReplies));
   }
 
-  return pick(FALLBACKS);
+  // ── Pivot suggestion if conversation stalled ──
+  if (exchangeCount > 6 && !topic) {
+    return emit(pickFresh(CASUAL_PIVOTS, usedReplies));
+  }
+
+  return emit(pickFresh(FALLBACKS, usedReplies));
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -775,6 +1178,12 @@ export function ConversationModule({ lesson: _lesson, onComplete }: Props) {
     topic: null,
     count: 0,
   });
+  // Anti-repetition: track used replies
+  const usedRepliesRef = useRef<Set<string>>(new Set());
+  // Track what the AI last asked
+  const lastAIQuestionRef = useRef<string | null>(null);
+  // Track milestone celebrations
+  const milestonesFiredRef = useRef<Set<number>>(new Set());
 
   const speakText = useCallback(
     (text: string) => {
@@ -799,11 +1208,16 @@ export function ConversationModule({ lesson: _lesson, onComplete }: Props) {
     memoryRef.current = createEmptyMemory();
     exchangeCountRef.current = 0;
     topicStreakRef.current = { topic: null, count: 0 };
+    usedRepliesRef.current = new Set();
+    lastAIQuestionRef.current = null;
+    milestonesFiredRef.current = new Set();
     setExchangeCount(0);
     setRememberedFactsCount(0);
     setSelectedCharacter(type);
     const greeting =
       OPENING_LINES[Math.floor(Math.random() * OPENING_LINES.length)];
+    usedRepliesRef.current.add(greeting);
+    lastAIQuestionRef.current = greeting;
     setMessages([{ id: "init", role: "lexi", text: greeting }]);
     setTimeout(() => speakText(greeting), 300);
   };
@@ -831,14 +1245,27 @@ export function ConversationModule({ lesson: _lesson, onComplete }: Props) {
       });
     }
 
-    // 4. Build AI reply
+    // 4. Build AI reply using enriched engine
     const reply = generateReply(
       text.trim(),
       memoryRef.current,
       exchangeCountRef.current,
       newFact,
       topicStreakRef.current,
+      usedRepliesRef.current,
+      lastAIQuestionRef.current,
+      milestonesFiredRef.current,
     );
+
+    // Store what AI just said as the last question
+    lastAIQuestionRef.current = reply;
+
+    // Clear usedReplies after ~12 exchanges to allow reuse if needed
+    if (exchangeCountRef.current > 12 && usedRepliesRef.current.size > 30) {
+      // Keep only the last 8 to avoid true immediate repeats
+      const arr = Array.from(usedRepliesRef.current);
+      usedRepliesRef.current = new Set(arr.slice(-8));
+    }
 
     newMsgs.push({ id: `l-${ts + 2}`, role: "lexi", text: reply });
 
