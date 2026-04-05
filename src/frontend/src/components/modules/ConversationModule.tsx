@@ -16,29 +16,11 @@ import {
   Mic,
   MicOff,
   Send,
-  Star,
   Volume2,
   VolumeX,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
-
-type Scenario = { title: string; description: string; roleContext: string };
-
-const SCENARIOS: Record<number, Scenario> = {
-  1: {
-    title: "Greetings & Introductions",
-    description:
-      "Your AI partner is a new student at your school. Greet them and introduce yourself!",
-    roleContext: "new_student",
-  },
-  2: {
-    title: "Asking for Directions",
-    description:
-      "Your AI partner is a lost tourist. Help them find the library!",
-    roleContext: "lost_tourist",
-  },
-};
 
 // ─── Session Memory ───────────────────────────────────────────────────────────
 
@@ -52,6 +34,7 @@ interface SessionMemory {
   place: string | null;
   subject: string | null;
   job_dream: string | null;
+  pet: string | null;
   mentionedFacts: string[];
 }
 
@@ -66,6 +49,7 @@ function createEmptyMemory(): SessionMemory {
     place: null,
     subject: null,
     job_dream: null,
+    pet: null,
     mentionedFacts: [],
   };
 }
@@ -75,11 +59,10 @@ function addFact(memory: SessionMemory, fact: string) {
   memory.mentionedFacts = memory.mentionedFacts.filter(
     (f) => f.toLowerCase() !== fact.toLowerCase(),
   );
-  if (memory.mentionedFacts.length >= 5) memory.mentionedFacts.shift();
+  if (memory.mentionedFacts.length >= 8) memory.mentionedFacts.shift();
   memory.mentionedFacts.push(fact);
 }
 
-// Returns the first newly-set structured fact { key, value }, or null if nothing new
 function extractFacts(
   msg: string,
   memory: SessionMemory,
@@ -92,17 +75,15 @@ function extractFacts(
       addFact(memory, factStr);
       if (!newFact) newFact = { key, value };
     } else {
-      // Still update facts list even if field was known
       addFact(memory, factStr);
     }
   }
 
-  // Name
   const nameMatch =
-    msg.match(/my name is (\w+)/i) ?? msg.match(/(?:call me) (\w+)/i);
-  if (nameMatch) setIfNew("name", nameMatch[1], `your name is ${nameMatch[1]}`);
+    msg.match(/my name is (\w+)/i) ?? msg.match(/(?:call me|i'm|i am) (\w+)/i);
+  if (nameMatch && nameMatch[1].length > 2)
+    setIfNew("name", nameMatch[1], `your name is ${nameMatch[1]}`);
 
-  // School
   const schoolMatch =
     msg.match(/i (?:study|go) (?:at|to|in) ([\w\s]+?) school/i) ??
     msg.match(/my school is ([\w\s]+)/i);
@@ -113,16 +94,14 @@ function extractFacts(
       `you go to ${schoolMatch[1].trim()} school`,
     );
 
-  // Grade / Class
-  const gradeMatch =
-    msg.match(/(?:i am in |i'm in )?(?:class|grade|standard) (\w+)/i) ??
-    msg.match(/(?:studying in|in) (?:class|grade) (\w+)/i);
+  const gradeMatch = msg.match(
+    /(?:i am in |i'm in )?(?:class|grade|standard) (\w+)/i,
+  );
   if (gradeMatch)
     setIfNew("grade", gradeMatch[1], `you are in class ${gradeMatch[1]}`);
 
-  // Dream job
   const jobMatch = msg.match(
-    /i (?:want to be|dream of being|wish to be) (?:a|an)? ([\w\s]+)/i,
+    /i (?:want to be|dream of being|wish to be|hope to be) (?:a|an)? ([\w\s]+)/i,
   );
   if (jobMatch)
     setIfNew(
@@ -131,18 +110,16 @@ function extractFacts(
       `you want to be a ${jobMatch[1].trim()}`,
     );
 
-  // Place
   const placeMatch = msg.match(
-    /i (?:live|am from|stay|come from) (?:in|at|from)? ([\w\s]+)/i,
+    /i (?:live|am from|stay|come from) (?:in|at|from)? ([\w\s,]+?)(?:\.|,|$)/i,
   );
   if (placeMatch)
     setIfNew(
       "place",
       placeMatch[1].trim(),
-      `you are from ${placeMatch[1].trim()}`,
+      `you're from ${placeMatch[1].trim()}`,
     );
 
-  // Favourite subject
   const subjectMatch =
     msg.match(/(?:favourite|favorite|love|like) subject is ([\w\s]+)/i) ??
     msg.match(/i (?:love|like|enjoy) ([\w\s]+?) (?:class|subject|lesson)/i);
@@ -153,25 +130,25 @@ function extractFacts(
       `your favourite subject is ${subjectMatch[1].trim()}`,
     );
 
-  // Sport
   const sportMatch =
     msg.match(/i (?:play|love playing|enjoy playing) ([\w\s]+?)(?:\.| |$)/i) ??
     msg.match(/(?:my favourite sport is) ([\w\s]+)/i);
   if (
     sportMatch &&
-    /cricket|football|basketball|tennis|badminton|swimming|running|volleyball|hockey|chess/i.test(
+    /cricket|football|soccer|basketball|tennis|badminton|swimming|running|volleyball|hockey|chess|kabaddi/i.test(
       sportMatch[1],
     )
   )
     setIfNew("sport", sportMatch[1].trim(), `you play ${sportMatch[1].trim()}`);
 
-  // Hobby
   const hobbyMatch = msg.match(
-    /i (?:love|like|enjoy|am into) (\w+ing|\w+ \w+ing)/i,
+    /i (?:love|like|enjoy|am into|really like) (\w+ing|\w+ \w+ing)/i,
   );
   if (
     hobbyMatch &&
-    !/^(going|being|doing|having|getting|making|taking)$/i.test(hobbyMatch[1])
+    !/^(going|being|doing|having|getting|making|taking|talking|saying)$/i.test(
+      hobbyMatch[1],
+    )
   )
     setIfNew(
       "hobby",
@@ -179,14 +156,12 @@ function extractFacts(
       `you enjoy ${hobbyMatch[1].trim()}`,
     );
 
-  // Food
-  const foodMatch =
-    msg.match(
-      /(?:my favourite food is|i love eating|i like eating) ([\w\s]+)/i,
-    ) ?? msg.match(/i (?:love|like) ([\w]+) (?:a lot|so much|very much)/i);
+  const foodMatch = msg.match(
+    /(?:my favourite food is|i love eating|i like eating|i enjoy eating) ([\w\s]+)/i,
+  );
   if (
     foodMatch &&
-    /pizza|rice|biryani|noodles|pasta|curry|burger|sandwich|dosa|idli|roti|bread|cake|chocolate|ice cream/i.test(
+    /pizza|rice|biryani|noodles|pasta|curry|burger|sandwich|dosa|idli|roti|bread|cake|chocolate|ice cream|samosa|pani puri/i.test(
       foodMatch[1],
     )
   )
@@ -196,100 +171,12 @@ function extractFacts(
       `your favourite food is ${foodMatch[1].trim()}`,
     );
 
+  const petMatch = msg.match(
+    /i have a (?:pet )?(dog|cat|rabbit|fish|parrot|hamster|bird)/i,
+  );
+  if (petMatch) setIfNew("pet", petMatch[1], `you have a ${petMatch[1]}`);
+
   return newFact;
-}
-
-// ─── Warm acknowledgment when a brand-new fact is discovered ─────────────────
-
-const FACT_ACKNOWLEDGMENTS: Record<string, (v: string) => string> = {
-  sport: (v) =>
-    `That's wonderful that you love ${v}! Do you play for a team, or just for fun with friends? I'd love to hear more about your ${v} experiences!`,
-  job_dream: (v) =>
-    `That's a brilliant goal — wanting to be a ${v}! What inspired you to choose that path? Is there someone in your life who motivated you?`,
-  hobby: (v) =>
-    `How lovely that you enjoy ${v}! How long have you been doing it, and what first got you started?`,
-  food: (v) =>
-    `${v.charAt(0).toUpperCase() + v.slice(1)} — great taste! Do you enjoy making it yourself, or do you have a favourite place you love to eat it?`,
-  place: (v) =>
-    `How interesting — ${v}! What is your absolute favourite thing about living there?`,
-  subject: (v) =>
-    `${v.charAt(0).toUpperCase() + v.slice(1)} is such a fascinating subject! What is it about ${v} that excites you the most?`,
-  grade: (v) =>
-    `Class ${v} — exciting times ahead! What has been the most interesting thing you have learnt this year so far?`,
-  name: (v) =>
-    `What a lovely name, ${v}! It's so nice to know you. Where are you from, ${v}?`,
-  school: (v) =>
-    `That sounds like a wonderful school! What is the best thing about studying at ${v}?`,
-};
-
-// ─── Topic deepening prompts for short answers ───────────────────────────────
-
-const DEEPENING_PROMPTS = [
-  "That's a great start! Can you tell me more — describe it in 2 or 3 full sentences.",
-  "I love that answer! Now try to expand on it — what makes you feel that way?",
-  "Good! Now challenge yourself — can you explain *why* in a complete sentence?",
-  "Nice! I'd love to hear more details. Can you paint a fuller picture for me?",
-  "Great response! Now go deeper — what is the story behind that?",
-];
-
-// ─── Topic streak bridges ─────────────────────────────────────────────────────
-
-const TOPIC_BRIDGES: Partial<
-  Record<string, (mem: SessionMemory) => string | null>
-> = {
-  school: (mem) =>
-    mem.sport
-      ? `You've been doing great talking about school! Let's connect it — do sports at your school help you stay focused on your studies? You mentioned you play ${mem.sport}, so I'd love to know!`
-      : `You've covered so much about school! Let's broaden the picture — outside of school, what is one activity that completely refreshes your mind?`,
-  technology: (mem) =>
-    mem.job_dream
-      ? `Since you're passionate about technology and you want to be a ${mem.job_dream}, what specific tech skills do you think will matter most in that career?`
-      : `We've explored technology thoroughly! Connecting it to the future — how do you think the technology you use today will evolve by the time you start your career?`,
-  sports: (mem) =>
-    mem.subject
-      ? `Sport and study go hand in hand! You mentioned ${mem.subject} as your favourite subject — does your sporting mindset, like discipline and focus, help you in ${mem.subject} class?`
-      : `You're clearly passionate about sports! Let's connect it to daily life — how does playing sport affect your energy levels and mood for the rest of the day?`,
-  career: (mem) =>
-    mem.school
-      ? `We've talked a lot about career goals! Thinking about your school life — which activities or lessons are quietly shaping you for the career you want?`
-      : `You've been so thoughtful about your career! Let's look at the bigger picture — what kind of impact do you want your work to have on other people's lives?`,
-  music: (mem) =>
-    mem.hobby
-      ? `Music connects to so much! Since you enjoy ${mem.hobby}, is there a particular soundtrack or type of music that puts you in the perfect mood for it?`
-      : `You clearly have a deep love for music! Let's go further — if you had to describe your personality using only three song titles or artists, what would they be?`,
-  food: (mem) =>
-    mem.place
-      ? `Food is such a big part of culture! Since you're from ${mem.place}, is there a dish from your area that you think the whole world should try?`
-      : `We've talked so much about food! Here's a fun one — if you had to eat only one meal for the rest of your life, what would it be and why?`,
-};
-
-// ─── Milestone messages ───────────────────────────────────────────────────────
-
-const MILESTONE_MESSAGES: Record<number, string> = {
-  5: "You're doing brilliantly — 5 exchanges in! Keep going, every sentence builds your fluency.",
-  10: "10 exchanges! Your English is flowing so naturally. Let's keep the conversation going!",
-  20: "20 exchanges — that's impressive! You are well on your way to speaking English with confidence.",
-};
-
-// ─── Personalised follow-up templates ────────────────────────────────────────
-
-const FOLLOWUP_TEMPLATES = [
-  "Earlier you mentioned {fact} — tell me more about that!",
-  "You brought up {fact} a little while ago. How has that been going lately?",
-  "I remember you said {fact}. I would love to know — how did that start for you?",
-  "Going back to {fact} that you mentioned — what do you enjoy most about it?",
-  "That connects to something you said earlier about {fact}. Can you expand on that?",
-];
-
-function buildPersonalisedFollowup(memory: SessionMemory): string | null {
-  if (memory.mentionedFacts.length === 0) return null;
-  const randomFact =
-    memory.mentionedFacts[
-      Math.floor(Math.random() * memory.mentionedFacts.length)
-    ];
-  const template =
-    FOLLOWUP_TEMPLATES[Math.floor(Math.random() * FOLLOWUP_TEMPLATES.length)];
-  return template.replace("{fact}", randomFact);
 }
 
 // ─── Grammar Correction ───────────────────────────────────────────────────────
@@ -319,11 +206,7 @@ const GRAMMAR_RULES: { pattern: RegExp; wrong: string; correct: string }[] = [
     wrong: "can able to",
     correct: "can / is able to",
   },
-  {
-    pattern: /\bi have went\b/i,
-    wrong: "I have went",
-    correct: "I have gone",
-  },
+  { pattern: /\bi have went\b/i, wrong: "I have went", correct: "I have gone" },
   { pattern: /\bhe have\b/i, wrong: "He have", correct: "He has" },
   { pattern: /\bshe have\b/i, wrong: "She have", correct: "She has" },
 ];
@@ -342,195 +225,47 @@ function detectGrammarError(text: string): GrammarError | null {
   return null;
 }
 
-// ─── Topic Detection & Adaptive Responses ────────────────────────────────────
-
-const TOPIC_RESPONSES: Record<string, string[]> = {
-  greetings: [
-    "Hello! Great to hear from you. How are you feeling today? Tell me in a full sentence!",
-    "Hi there! Lovely to chat. What is your name and where are you from?",
-    "Hey! Nice to meet you. Can you introduce yourself with two or three sentences?",
-  ],
-  school: [
-    "School sounds interesting! What is your favourite subject and why do you enjoy it?",
-    "That reminds me of my school days! Do you have any exams coming up? How do you prepare?",
-    "Homework can be challenging! Which subject do you find the hardest and which is the easiest?",
-    "Teachers play such an important role. Tell me about a teacher who has inspired you.",
-  ],
-  family: [
-    "Family is so important! How many people are in your family? Tell me about each of them.",
-    "That sounds lovely! Do you spend a lot of time with your family on weekends?",
-    "Home is where the heart is! What is your favourite thing to do with your family?",
-    "Brothers and sisters can be fun! Do you have any siblings? What are they like?",
-  ],
-  food: [
-    "Food is a wonderful topic! What is your all-time favourite dish and who cooks it best?",
-    "Yummy! Do you enjoy cooking? What is the easiest dish you can make yourself?",
-    "Every region has special food. What traditional food is popular in your area?",
-    "Breakfast is the most important meal! What did you have for breakfast today?",
-  ],
-  sports: [
-    "Sports are great for health! Do you play any sport regularly? Tell me more!",
-    "Exciting! Who is your favourite sports player and why do you admire them?",
-    "Team sports build teamwork. Have you ever played for a school team or a local club?",
-    "Watching matches is thrilling! What was the most exciting match you have ever watched?",
-  ],
-  weather: [
-    "The weather affects our mood so much! What kind of weather do you enjoy the most?",
-    "Rainy days can be cosy! What do you like to do when it rains outside?",
-    "Summer has its own charm! What activities do you enjoy during summer holidays?",
-    "Cold winters are wonderful! Do you experience snowfall in your area?",
-  ],
-  travel: [
-    "Travel broadens the mind! Have you visited any place that left a strong impression on you?",
-    "Wonderful! If you could travel anywhere in the world, where would you go and why?",
-    "Road trips can be so much fun! What is the most interesting trip you have been on?",
-    "Different countries, different cultures! What is one thing you would love to experience abroad?",
-  ],
-  hobbies: [
-    "Hobbies keep us creative! How long have you been practising your hobby and how did you start?",
-    "That sounds fun! Do you prefer indoor hobbies like reading or outdoor ones like sports?",
-    "Music is a universal language! Do you play any instrument or enjoy singing?",
-    "Drawing and art express our feelings. Have you ever created something you are really proud of?",
-  ],
-  feelings: [
-    "It is good to talk about feelings! Can you describe exactly how you are feeling and why?",
-    "Thank you for sharing. What usually cheers you up when you are feeling down?",
-    "Being excited is wonderful! What is making you feel that way? Tell me everything!",
-    "Feelings are natural. Try to use describing words — are you slightly, very, or extremely happy?",
-  ],
-  dreams: [
-    "Dreams and goals give us direction! What do you want to be when you grow up and why?",
-    "Fantastic ambition! What steps are you taking right now to reach that dream?",
-    "The future is bright! Where do you see yourself in ten years? Paint me a picture!",
-    "Every great career starts with a plan. What subjects are most important for your dream job?",
-  ],
-  technology: [
-    "Technology is changing everything! What is your favourite gadget and how do you use it daily?",
-    "Social media is a huge part of life now. Which platforms do you use most and why?",
-    "Screen time is a real topic! How many hours a day do you spend on your phone or computer?",
-    "Coding is a powerful skill. Have you ever tried programming or building an app? What happened?",
-    "Artificial intelligence is fascinating! What do you think AI will change about our future?",
-    "Every app solves a problem. If you could build your own app, what problem would it solve?",
-    "The internet connects the world. What is the most useful thing you have learnt online?",
-  ],
-  career: [
-    "Career goals say a lot about who we are! What is your dream job and what excites you about it?",
-    "Every profession needs certain skills. What skills are you building right now for your future career?",
-    "Work-life balance is so important. How do you imagine balancing your career with personal life?",
-    "Entrepreneurs change the world! Do you have any business ideas you would love to pursue one day?",
-    "Role models inspire us. Is there someone in your field you look up to and want to learn from?",
-    "Internships give real experience. Would you like to intern somewhere before your first full-time job?",
-    "Interviews can be nerve-wracking! How would you describe your strengths in a job interview?",
-  ],
-  movies: [
-    "Movies are great! What genre do you enjoy most — comedy, thriller, drama, or action?",
-    "Tell me about the last movie you watched. What was your favourite scene and why?",
-    "Great actors bring characters to life. Who is your all-time favourite actor or actress?",
-    "Books vs movies — which do you prefer, reading a book first or watching the film?",
-    "Some movies change how we see the world. Has any film ever changed your thinking?",
-    "If you could recommend just one movie to a friend, which would you choose and why?",
-    "Bollywood or Hollywood? Which style of filmmaking do you enjoy more?",
-  ],
-  music: [
-    "Music speaks to the soul! What genre of music do you listen to most — pop, classical, rap, or something else?",
-    "What is the one song you have on repeat right now? What do you love about it?",
-    "Live concerts are an amazing experience! Have you ever attended one? What was it like?",
-    "Playing an instrument is a great skill. Do you play any instrument or wish you could learn one?",
-    "Music can shift our mood instantly. How does your favourite music make you feel?",
-    "Creating a playlist is an art! If you made a playlist for a long road trip, what five songs would you include?",
-  ],
-  health: [
-    "Health is our greatest wealth! Describe your daily routine — do you have any healthy habits?",
-    "Sleep is so underrated! How many hours of sleep do you get and do you feel well-rested?",
-    "Exercise keeps the body and mind strong. What is your favourite form of exercise and how often do you do it?",
-    "Diet plays a huge role in energy levels. What healthy food do you genuinely enjoy eating?",
-    "Mental health is just as important as physical health. How do you manage stress in your life?",
-    "Meditation and yoga are powerful tools. Have you ever tried either? What was your experience?",
-  ],
-  environment: [
-    "Our planet needs our help! What changes have you personally noticed because of climate change?",
-    "Small daily habits add up. What eco-friendly habits do you practise at home or school?",
-    "Nature is beautiful and calming. What is your favourite natural place you have visited or want to visit?",
-    "Animals and wildlife are precious. What is one species you feel strongly about protecting and why?",
-    "Renewable energy is the future. Do you think solar or wind power can fully replace fossil fuels?",
-    "Plastic pollution is a serious problem. What alternatives to single-use plastic do you use in your daily life?",
-  ],
-  books: [
-    "Books open new worlds! What was the last book you read, and would you recommend it?",
-    "Everyone has a favourite genre. Do you prefer fiction, non-fiction, poetry, or something else?",
-    "Characters stay with us long after we finish a book. Which fictional character has left the biggest impression on you?",
-    "Reading builds vocabulary and imagination. How has reading helped you in school or everyday life?",
-    "If you could recommend one book to everyone in your class, what would it be and why?",
-    "Fiction vs non-fiction — which do you find more enjoyable and what is the reason for your preference?",
-  ],
-  festivals: [
-    "Festivals bring so much joy! Which festival is your absolute favourite and what makes it special?",
-    "Family traditions make celebrations unique. What is one tradition your family always follows during festivals?",
-    "Food is a big part of every celebration! What special dish does your family make during your favourite festival?",
-    "Decorations set the mood! How do you decorate your home during a major festival?",
-    "What is the most memorable festival celebration you have ever experienced? Tell me every detail!",
-  ],
-  friendship: [
-    "Friendships are such a treasure! Tell me about your best friend — how did you two meet?",
-    "What qualities do you value most in a friend — loyalty, humour, honesty, or something else?",
-    "Funny memories with friends are priceless! What is the most hilarious thing that has happened with your friends?",
-    "Friendships change as we grow older. How have your friendships evolved from school days to now?",
-    "Long-distance friendships take effort. Do you have any friends who live far away? How do you stay connected?",
-    "Good friends support each other through tough times. Has a friend ever helped you through a difficult moment?",
-  ],
-  money: [
-    "Money management is a life skill! Do you save your pocket money or spend it right away?",
-    "Smart saving requires a goal. What are you currently saving up for and how long will it take?",
-    "We all have a story! What is the most expensive thing you have ever bought, and was it worth it?",
-    "Budgeting helps us stay on track. Do you follow any system to manage your spending?",
-    "Financial goals shape our future. Where do you see your finances in five years?",
-    "Cryptocurrency is a hot topic. Have you ever heard of Bitcoin? What is your opinion on digital currency?",
-  ],
-};
+// ─── Topic Detection ──────────────────────────────────────────────────────────
 
 const TOPIC_KEYWORDS: Record<string, RegExp> = {
-  greetings:
-    /\b(hi|hello|hey|good morning|good afternoon|good evening|nice to meet|my name is)\b/i,
   school:
-    /\b(school|class|teacher|homework|subject|exam|study|college|university|lesson)\b/i,
+    /\b(school|class|teacher|homework|subject|exam|study|college|university|lesson|test|marks)\b/i,
   family:
-    /\b(family|mother|father|sister|brother|parents|home|mom|dad|uncle|aunt|grandma|grandpa)\b/i,
-  food: /\b(eat|food|lunch|dinner|breakfast|rice|pizza|cook|hungry|meal|snack|drink)\b/i,
+    /\b(family|mother|father|sister|brother|parents|home|mom|dad|uncle|aunt|grandma|grandpa|sibling)\b/i,
+  food: /\b(eat|food|lunch|dinner|breakfast|rice|pizza|cook|hungry|meal|snack|biryani|dosa|curry|restaurant)\b/i,
   sports:
-    /\b(play|cricket|football|basketball|game|sport|team|match|run|swim|gym|exercise)\b/i,
+    /\b(play|cricket|football|soccer|basketball|sport|team|match|run|swim|gym|exercise|badminton|tennis)\b/i,
   weather:
     /\b(weather|rain|sunny|cold|hot|summer|winter|spring|temperature|climate|wind|snow)\b/i,
   travel:
-    /\b(travel|trip|visit|place|holiday|vacation|country|city|abroad|tour|journey)\b/i,
+    /\b(travel|trip|visit|holiday|vacation|country|city|abroad|tour|journey|place)\b/i,
   hobbies:
-    /\b(hobby|drawing|painting|reading|music|dance|sing|listen|collect|craft|write)\b/i,
+    /\b(hobby|drawing|painting|reading|dance|sing|collect|craft|write|photography|cooking|gaming)\b/i,
   feelings:
-    /\b(feel|feeling|happy|sad|tired|excited|nervous|bored|worried|angry|afraid|joy|stress)\b/i,
-  dreams: /\b(dream|future|plan|aspire|wish|ambition)\b/i,
+    /\b(feel|feeling|happy|sad|tired|excited|nervous|bored|worried|angry|stressed|joy)\b/i,
+  dreams: /\b(dream|future|plan|aspire|wish|ambition|goal|want to be|hope)\b/i,
   technology:
-    /\b(phone|smartphone|computer|laptop|internet|app|social media|youtube|games|gadget|coding|software|robot|AI|technology|online|digital|wifi|video|tablet)\b/i,
+    /\b(phone|smartphone|computer|laptop|internet|app|social media|youtube|game|gadget|coding|software|robot|AI|technology|online|digital|wifi|video)\b/i,
   career:
-    /\b(job|career|work|profession|engineer|doctor|lawyer|business|office|salary|internship|skill|resume|interview|company|startup|entrepreneur)\b/i,
+    /\b(job|career|work|profession|engineer|doctor|lawyer|business|office|salary|internship|skill|company|startup|entrepreneur)\b/i,
   movies:
-    /\b(movie|film|cinema|watch|actor|actress|director|series|netflix|show|episode|scene|character|comedy|thriller|drama|bollywood|hollywood)\b/i,
+    /\b(movie|film|cinema|watch|actor|actress|director|series|netflix|show|episode|scene|comedy|thriller|drama|bollywood|hollywood)\b/i,
   music:
-    /\b(music|song|singer|artist|band|concert|melody|lyrics|playlist|rap|pop|classical|rhythm|instrument|guitar|piano|voice)\b/i,
+    /\b(music|song|singer|artist|band|concert|melody|lyrics|playlist|rap|pop|classical|instrument|guitar|piano)\b/i,
   health:
     /\b(health|fit|fitness|sleep|diet|nutrition|hospital|sick|medicine|mental health|yoga|meditation|weight)\b/i,
   environment:
-    /\b(environment|nature|trees|pollution|climate|earth|recycle|green|planet|energy|plastic|water|animals|wildlife|forest|global warming)\b/i,
+    /\b(environment|nature|trees|pollution|climate|earth|recycle|green|planet|plastic|animals|wildlife|forest)\b/i,
   books:
-    /\b(book|read|novel|story|author|chapter|library|fiction|non-fiction|poem|poetry|literature|page|kindle|magazine)\b/i,
+    /\b(book|read|novel|story|author|chapter|library|fiction|poetry|literature|page|magazine)\b/i,
   festivals:
-    /\b(festival|celebrate|celebration|holiday|diwali|christmas|eid|holi|new year|party|tradition|culture|custom|event)\b/i,
+    /\b(festival|celebrate|celebration|holiday|diwali|christmas|eid|holi|new year|party|tradition|culture)\b/i,
   friendship:
-    /\b(friend|friendship|best friend|hang out|social|peer|classmate|trust|loyal|childhood|college friend)\b/i,
+    /\b(friend|friendship|best friend|hang out|classmate|trust|loyal|childhood)\b/i,
   money:
-    /\b(money|save|spend|budget|bank|earn|income|cost|price|expensive|cheap|pocket money|finance|investment|cryptocurrency)\b/i,
+    /\b(money|save|spend|budget|bank|earn|income|cost|price|expensive|pocket money|finance)\b/i,
+  pets: /\b(dog|cat|pet|rabbit|fish|parrot|hamster|bird|animal|puppy|kitten)\b/i,
 };
-
-const CHANGE_TOPIC_REGEX =
-  /\b(other topic|change topic|different topic|something else|let's talk about|talk about something|switch topic|another topic)\b/i;
 
 function detectTopic(msg: string): string | null {
   for (const [topic, pattern] of Object.entries(TOPIC_KEYWORDS)) {
@@ -539,9 +274,433 @@ function detectTopic(msg: string): string | null {
   return null;
 }
 
+// ─── Natural Response Engine ──────────────────────────────────────────────────
+
+// Opening lines — rotate naturally
+const OPENING_LINES = [
+  "Hey! How are you doing today?",
+  "Hi there! What's been on your mind lately?",
+  "Hey! Been up to anything fun recently?",
+  "Hi! How's your day going so far?",
+  "Hey, good to see you! What's up?",
+];
+
+// Casual fillers / acknowledgments to mix in
+const CASUAL_ACKS = [
+  "Oh nice!",
+  "That's cool!",
+  "Haha, yeah!",
+  "Interesting!",
+  "Oh wow!",
+  "I see!",
+  "Right?",
+  "Yeah totally.",
+  "Nice one!",
+];
+
+function pick<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+// Short-answer nudges
+const SHORT_NUDGES = [
+  "Nice! Say more?",
+  "Oh yeah? Like what?",
+  "Really? Tell me more!",
+  "Interesting! Go on...",
+  "Haha, what do you mean exactly?",
+  "Oh cool — how so?",
+  "I'm curious, say more!",
+];
+
+// Fallbacks when nothing matches — never lists topics
+const FALLBACKS = [
+  "Interesting! Tell me more about that.",
+  "Oh yeah? What do you mean exactly?",
+  "That's cool. Go on!",
+  "I'm curious — can you tell me a bit more?",
+  "Haha, really? Explain that!",
+  "Oh wow, I didn't expect that. What's the story?",
+  "Sounds fun! What happened next?",
+];
+
+// Pivot starters when conversation stalls (only after 5+ exchanges with no topic)
+const CASUAL_PIVOTS = [
+  "By the way, what do you usually do after school?",
+  "Hey, what kind of music are you into?",
+  "Random question — what's your favourite food?",
+  "What's something you've been thinking about lately?",
+  "Do you have any hobbies outside school?",
+];
+
+// Per-topic natural response banks — SHORT and varied
+const TOPIC_BANKS: Record<string, string[]> = {
+  school: [
+    "Oh, school! Which subject do you like most?",
+    "Nice! What grade are you in right now?",
+    "Exams coming up? That can be stressful.",
+    "Any teachers you actually enjoy? Like, who makes it fun?",
+    "What's the hardest thing about school for you?",
+    "Is school far from your home?",
+    "Do you have a favourite spot at school — library, canteen?",
+  ],
+  family: [
+    "Nice! Big family or small?",
+    "Sounds sweet. Do you hang out with them on weekends?",
+    "Oh cool! Any siblings?",
+    "What's something your family loves doing together?",
+    "Is there someone in your family you're really close to?",
+  ],
+  food: [
+    "Ooh, food! Homemade or restaurant?",
+    "Nice! Do you cook at all?",
+    "That sounds delicious. What's the last amazing thing you ate?",
+    "Ha, I think I'd love that too. Any favourite snacks?",
+    "What would your perfect meal look like?",
+  ],
+  sports: [
+    "Oh cool! Do you play for a team or just casually?",
+    "Nice! How long have you been playing?",
+    "Who's your favourite player?",
+    "That's a great sport! Do you play with friends or in a club?",
+    "Any memorable match you've played or watched?",
+  ],
+  weather: [
+    "Ugh, tell me about it! What's the weather like where you are?",
+    "Oh nice! What do you usually do on rainy days?",
+    "So are you more of a summer or winter person?",
+    "Does the weather affect your mood much?",
+  ],
+  travel: [
+    "Oh nice, where did you go?",
+    "That sounds fun! How was it?",
+    "Cool! What was the best part of the trip?",
+    "Have you ever been somewhere that really surprised you?",
+    "If you could go anywhere tomorrow, where?",
+  ],
+  hobbies: [
+    "Oh that's fun! How long have you been doing it?",
+    "Nice! What got you into that?",
+    "That sounds chill. Do you do it alone or with friends?",
+    "Have you ever shared your work with anyone?",
+  ],
+  feelings: [
+    "Aw, what's making you feel that way?",
+    "That makes sense. What helps when you feel like that?",
+    "Yeah I get that. What happened?",
+    "Oh, what's got you excited?",
+  ],
+  dreams: [
+    "Oh nice! What made you want that?",
+    "That's a great goal. Are you doing anything towards it?",
+    "Where do you see yourself in a few years?",
+    "What's the first step you'd take?",
+  ],
+  technology: [
+    "Ha, same! What gadget can you absolutely not live without?",
+    "Oh interesting! Have you ever tried coding anything?",
+    "What do you think about AI — cool or a bit scary?",
+    "Do you spend a lot of time online? What do you usually do?",
+    "Any app that you think everyone should use?",
+  ],
+  career: [
+    "Nice goal! What made you want that career?",
+    "That's cool. What skills are you building for it?",
+    "Do you know anyone in that field?",
+    "What does your dream workday look like?",
+  ],
+  movies: [
+    "Oh nice! What was the last movie you watched?",
+    "Ha, what genre are you into — action, comedy, drama?",
+    "Any movie that actually changed the way you think?",
+    "Bollywood or Hollywood?",
+    "Who's your favourite actor?",
+  ],
+  music: [
+    "Nice taste! Who do you listen to most?",
+    "Oh, what kind of music puts you in a good mood?",
+    "Do you play any instruments?",
+    "What's that one song you have on repeat right now?",
+  ],
+  health: [
+    "Nice! Do you exercise regularly?",
+    "How do you manage stress? Any tricks?",
+    "Are you a morning person or night owl?",
+    "Do you think sleep is underrated? Because I definitely do.",
+  ],
+  environment: [
+    "Yeah, it's pretty serious. Do you do anything eco-friendly?",
+    "What's one environmental issue you actually care about?",
+    "Have you noticed any changes in weather where you live?",
+  ],
+  books: [
+    "Oh nice! What's the last book you read?",
+    "Fiction or non-fiction — which do you prefer?",
+    "Any character from a book you really connected with?",
+    "What kind of stories do you like?",
+  ],
+  festivals: [
+    "Oh fun! Which festival is your favourite?",
+    "What's one tradition your family always follows?",
+    "What's the best food from your favourite festival?",
+    "Any memorable celebration that stands out?",
+  ],
+  friendship: [
+    "Aw nice! How did you two meet?",
+    "What's something funny you've done with your friends?",
+    "What do you look for in a friend?",
+    "Have you kept in touch with any childhood friends?",
+  ],
+  money: [
+    "Ha, saving or spending type?",
+    "What are you saving up for right now?",
+    "Do you get pocket money?",
+    "What's the most useful thing you've ever bought?",
+  ],
+  pets: [
+    "Aww! What's their name?",
+    "That's so sweet. How long have you had them?",
+    "I think pets make everything better. Do they?",
+    "What's the funniest thing your pet has ever done?",
+  ],
+};
+
+// Memory-based call-backs — weave in what they said before naturally
+function buildMemoryCallback(memory: SessionMemory): string | null {
+  const callbacks: string[] = [];
+  if (memory.sport)
+    callbacks.push(
+      `Wait — you play ${memory.sport} right? Do you practice every day?`,
+    );
+  if (memory.food)
+    callbacks.push(
+      `Oh by the way, earlier you mentioned ${memory.food}. Homemade or do you order it?`,
+    );
+  if (memory.job_dream)
+    callbacks.push(
+      `Didn't you say you want to be a ${memory.job_dream}? That's such a cool goal.`,
+    );
+  if (memory.hobby)
+    callbacks.push(
+      `You mentioned you enjoy ${memory.hobby} — how's that going lately?`,
+    );
+  if (memory.place)
+    callbacks.push(
+      `Oh yeah, you're from ${memory.place} — what do you like most about it?`,
+    );
+  if (memory.subject)
+    callbacks.push(
+      `You said ${memory.subject} is your favourite subject — why that one?`,
+    );
+  if (memory.pet)
+    callbacks.push(`How's your ${memory.pet} doing? They must keep you busy!`);
+  if (callbacks.length === 0) return null;
+  return pick(callbacks);
+}
+
+// Fact acknowledgments — short and natural
+const FACT_ACKS: Record<string, (v: string) => string> = {
+  sport: (v) =>
+    pick([
+      `Oh, ${v}! Do you play for a team or just for fun?`,
+      `Nice! How long have you been playing ${v}?`,
+      `${v.charAt(0).toUpperCase() + v.slice(1)}? Are you pretty good at it?`,
+    ]),
+  job_dream: (v) =>
+    pick([
+      `A ${v}? That's awesome! What made you choose that?`,
+      `Oh wow, a ${v}! What's the most exciting part about that career?`,
+      `Nice goal! Are you already doing anything to work towards being a ${v}?`,
+    ]),
+  hobby: (v) =>
+    pick([
+      `Oh, ${v}? How long have you been doing that?`,
+      `Nice! What got you into ${v}?`,
+      `That's fun! Do you do ${v} alone or with others?`,
+    ]),
+  food: (v) =>
+    pick([
+      `${v.charAt(0).toUpperCase() + v.slice(1)}! Homemade or restaurant?`,
+      `Ooh, ${v}! Who makes the best one you've had?`,
+    ]),
+  place: (v) =>
+    pick([
+      `Oh, ${v}! What's your favourite thing about it?`,
+      `Nice! Have you always lived in ${v}?`,
+    ]),
+  subject: (v) =>
+    pick([
+      `${v.charAt(0).toUpperCase() + v.slice(1)}! What do you love about it?`,
+      `Oh interesting — why ${v} specifically?`,
+    ]),
+  name: (v) =>
+    pick([
+      `Nice to meet you, ${v}! So what's on your mind today?`,
+      `Hey ${v}! Cool name. Where are you from?`,
+    ]),
+  pet: (v) =>
+    pick([
+      `A ${v}! What's their name?`,
+      `Oh that's adorable! What does your ${v} do all day?`,
+    ]),
+};
+
+// ─── Core Response Generator ──────────────────────────────────────────────────
+
+function generateReply(
+  userMsg: string,
+  memory: SessionMemory,
+  exchangeCount: number,
+  newFact: { key: string; value: string } | null,
+  lastTopicRef: { topic: string | null; count: number },
+): string {
+  const msg = userMsg.trim();
+  const words = msg.split(/\s+/).length;
+  const isVeryShort = words <= 3;
+  const isShort = words <= 7;
+  const lower = msg.toLowerCase();
+
+  // Very short one-word or yes/no replies — gentle nudge
+  if (isVeryShort) {
+    // Check if it's a yes/no
+    if (
+      /^(yes|yeah|yep|yup|sure|okay|ok|no|nope|nah|maybe|hmm|hm|oh)$/i.test(msg)
+    ) {
+      return pick([
+        "Haha yeah! What else is on your mind?",
+        "Nice! Tell me more about that.",
+        "Oh interesting! What do you mean?",
+        "Right? So what do you usually do about it?",
+        "Ha, go on then!",
+      ]);
+    }
+    if (
+      /^(good|fine|great|awesome|amazing|nice|cool|bad|okay|alright)$/i.test(
+        msg,
+      )
+    ) {
+      return pick([
+        "Nice! What's making it good?",
+        "Cool, what's been happening?",
+        "Oh yeah? Tell me more!",
+        "Haha, say more!",
+      ]);
+    }
+    return pick(SHORT_NUDGES);
+  }
+
+  // Greetings
+  if (
+    /^(hi|hello|hey|good morning|good afternoon|good evening|howdy)\b/i.test(
+      msg,
+    )
+  ) {
+    if (memory.name)
+      return `Hey ${memory.name}! Good to hear from you. What's up?`;
+    return pick([
+      "Hey! How's your day been so far?",
+      "Hi! What's going on?",
+      "Hey! Been up to anything interesting?",
+    ]);
+  }
+
+  // Positive feelings
+  if (
+    /\b(happy|excited|great|awesome|amazing|wonderful|fantastic|love|enjoying)\b/i.test(
+      lower,
+    )
+  ) {
+    const ack = pick(CASUAL_ACKS);
+    const topic = detectTopic(msg);
+    if (topic && TOPIC_BANKS[topic]) {
+      return `${ack} ${pick(TOPIC_BANKS[topic])}`;
+    }
+    return `${ack} What's making you feel that way?`;
+  }
+
+  // Negative feelings
+  if (
+    /\b(tired|bored|sad|stressed|nervous|worried|bad|terrible|awful|hate|annoyed)\b/i.test(
+      lower,
+    )
+  ) {
+    return pick([
+      "Aw, what's going on?",
+      "That sounds rough. What happened?",
+      "Oh no! What's bothering you?",
+      "I get that. What usually helps when you feel like that?",
+    ]);
+  }
+
+  // New fact discovered — react naturally
+  if (newFact && FACT_ACKS[newFact.key]) {
+    return FACT_ACKS[newFact.key](newFact.value);
+  }
+
+  // Every 5th exchange after 4 — recall something they said (50% chance)
+  if (
+    exchangeCount > 4 &&
+    exchangeCount % 5 === 0 &&
+    memory.mentionedFacts.length >= 2
+  ) {
+    const recall = buildMemoryCallback(memory);
+    if (recall) return recall;
+  }
+
+  // Detect topic and respond
+  const topic = detectTopic(msg);
+  if (topic) {
+    // Update streak
+    if (topic === lastTopicRef.topic) {
+      lastTopicRef.count++;
+    } else {
+      lastTopicRef.topic = topic;
+      lastTopicRef.count = 1;
+    }
+    // Use memory context
+    if (topic === "career" && memory.job_dream) {
+      return pick([
+        `Since you want to be a ${memory.job_dream} — what's the hardest part about getting there?`,
+        `Cool! Are you working on any skills for your ${memory.job_dream} career?`,
+      ]);
+    }
+    if (topic === "school" && memory.grade) {
+      return pick([
+        `Class ${memory.grade} is intense! Which part is hardest right now?`,
+        `Oh right, you're in class ${memory.grade}. Any subjects you actually enjoy?`,
+      ]);
+    }
+    if (topic === "sports" && memory.sport) {
+      return pick([
+        `Oh nice, ${memory.sport} again! Are you getting better at it?`,
+        `Ha, you really love ${memory.sport}. Have you played any matches lately?`,
+      ]);
+    }
+    if (TOPIC_BANKS[topic]) {
+      const resp = pick(TOPIC_BANKS[topic]);
+      // Occasionally add a casual ack before the question
+      if (Math.random() > 0.5 && !isShort) {
+        return `${pick(CASUAL_ACKS)} ${resp}`;
+      }
+      return resp;
+    }
+  } else {
+    // No topic matched — reset streak
+    lastTopicRef.topic = null;
+    lastTopicRef.count = 0;
+  }
+
+  // If the conversation has stalled — offer a casual pivot
+  if (exchangeCount > 6 && !topic) {
+    return pick(CASUAL_PIVOTS);
+  }
+
+  return pick(FALLBACKS);
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type ChatRole = "user" | "lexi" | "tip" | "milestone";
+type ChatRole = "user" | "lexi" | "tip";
 
 type ChatMsg = {
   id: string;
@@ -589,32 +748,16 @@ function ClassioTipCard({
           <span className="font-semibold text-green-700">{correct}</span>
         </p>
         <p className="text-xs text-amber-600 mt-1 italic">
-          Great catch — small fixes make a big difference!
+          Small fix, big difference!
         </p>
       </div>
     </motion.div>
   );
 }
 
-function MilestoneCard({ text }: { text: string }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95, y: 6 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      className="mx-auto max-w-[92%] rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 px-4 py-2.5 flex gap-2.5 items-center shadow-sm"
-    >
-      <Star className="w-4 h-4 text-emerald-500 shrink-0 fill-emerald-400" />
-      <p className="text-xs font-semibold text-emerald-700 leading-relaxed">
-        {text}
-      </p>
-    </motion.div>
-  );
-}
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export function ConversationModule({ lesson, onComplete }: Props) {
-  const _scenario = SCENARIOS[lesson] ?? SCENARIOS[1];
+export function ConversationModule({ lesson: _lesson, onComplete }: Props) {
   const [selectedCharacter, setSelectedCharacter] =
     useState<CharacterType | null>(null);
   const [messages, setMessages] = useState<ChatMsg[]>([]);
@@ -626,7 +769,6 @@ export function ConversationModule({ lesson, onComplete }: Props) {
   const [rememberedFactsCount, setRememberedFactsCount] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
-  const lastPickedRef = useRef<Record<string, number>>({});
   const memoryRef = useRef<SessionMemory>(createEmptyMemory());
   const exchangeCountRef = useRef(0);
   const topicStreakRef = useRef<{ topic: string | null; count: number }>({
@@ -640,8 +782,8 @@ export function ConversationModule({ lesson, onComplete }: Props) {
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
       u.lang = "en-US";
-      u.rate = 0.9;
-      u.pitch = 1.1;
+      u.rate = 0.92;
+      u.pitch = 1.05;
       window.speechSynthesis.speak(u);
     },
     [ttsEnabled],
@@ -653,64 +795,6 @@ export function ConversationModule({ lesson, onComplete }: Props) {
     };
   }, []);
 
-  // Core response generator — returns the main lexi reply text
-  const getLexiResponse = (
-    userMessage: string,
-    memory: SessionMemory,
-    currentExchangeCount: number,
-  ): string => {
-    const msg = userMessage.toLowerCase().trim();
-    const mem = memory;
-
-    if (CHANGE_TOPIC_REGEX.test(msg)) {
-      return "Sure! Which topic would you like to discuss? You can choose from school, family, sports, travel, technology, movies, music, health, career goals, books, festivals, friendship, money, or anything else you like!";
-    }
-
-    const topic = detectTopic(msg);
-
-    // Every 4th exchange weave in a personalised follow-up
-    if (
-      currentExchangeCount > 0 &&
-      currentExchangeCount % 4 === 3 &&
-      mem.mentionedFacts.length > 0
-    ) {
-      const followup = buildPersonalisedFollowup(mem);
-      if (followup) return followup;
-    }
-
-    // Context-aware responses by topic + memory
-    if (topic === "career" && mem.job_dream) {
-      return `Earlier you said you want to be a ${mem.job_dream} — that is a fantastic goal! What specific skills are you working on to get there?`;
-    }
-    if (topic === "school" && mem.grade) {
-      return `You mentioned you are in class ${mem.grade} — which subject are you finding most challenging this year, and how are you tackling it?`;
-    }
-    if (topic === "sports" && mem.sport) {
-      return `You talked about ${mem.sport} earlier — let us go deeper! What is your all-time favourite memory of playing?`;
-    }
-    if (topic === "greetings" && mem.name) {
-      return `Great to chat with you again, ${mem.name}! What would you like to talk about today?`;
-    }
-
-    if (topic && TOPIC_RESPONSES[topic]) {
-      const responses = TOPIC_RESPONSES[topic];
-      const lastIdx = lastPickedRef.current[topic] ?? -1;
-      const available = responses.map((_, i) => i).filter((i) => i !== lastIdx);
-      const pool =
-        available.length > 0 ? available : responses.map((_, i) => i);
-      const chosen = pool[Math.floor(Math.random() * pool.length)];
-      lastPickedRef.current[topic] = chosen;
-      let response = responses[chosen];
-      // Occasionally address by name
-      if (mem.name && currentExchangeCount % 3 === 2) {
-        response = `${mem.name}, ${response.charAt(0).toLowerCase()}${response.slice(1)}`;
-      }
-      return response;
-    }
-
-    return "That is interesting! Which topic would you like to explore? We can talk about school, family, technology, movies, music, health, career goals, books, festivals, friendship, money, or anything on your mind!";
-  };
-
   const startWithCharacter = (type: CharacterType) => {
     memoryRef.current = createEmptyMemory();
     exchangeCountRef.current = 0;
@@ -718,7 +802,8 @@ export function ConversationModule({ lesson, onComplete }: Props) {
     setExchangeCount(0);
     setRememberedFactsCount(0);
     setSelectedCharacter(type);
-    const greeting = "Let's talk! How are you?";
+    const greeting =
+      OPENING_LINES[Math.floor(Math.random() * OPENING_LINES.length)];
     setMessages([{ id: "init", role: "lexi", text: greeting }]);
     setTimeout(() => speakText(greeting), 300);
   };
@@ -731,19 +816,11 @@ export function ConversationModule({ lesson, onComplete }: Props) {
     // 1. User message
     newMsgs.push({ id: `u-${ts}`, role: "user", text: text.trim() });
 
-    // 2. Extract facts — returns first newly-set structured fact
+    // 2. Extract facts
     const newFact = extractFacts(text.trim(), memoryRef.current);
     setRememberedFactsCount(memoryRef.current.mentionedFacts.length);
 
-    // 3. Update topic streak
-    const detectedTopic = detectTopic(text.toLowerCase());
-    if (detectedTopic && detectedTopic === topicStreakRef.current.topic) {
-      topicStreakRef.current.count++;
-    } else {
-      topicStreakRef.current = { topic: detectedTopic, count: 1 };
-    }
-
-    // 4. Grammar tip (independent — always shown)
+    // 3. Grammar tip
     const grammarError = detectGrammarError(text.trim());
     if (grammarError) {
       newMsgs.push({
@@ -754,71 +831,24 @@ export function ConversationModule({ lesson, onComplete }: Props) {
       });
     }
 
-    // 5. Milestone message (before AI reply)
-    const nextExchangeNum = exchangeCountRef.current + 1;
-    const milestoneText = MILESTONE_MESSAGES[nextExchangeNum];
-    if (milestoneText) {
-      newMsgs.push({
-        id: `milestone-${ts + 2}`,
-        role: "milestone",
-        text: milestoneText,
-      });
-    }
+    // 4. Build AI reply
+    const reply = generateReply(
+      text.trim(),
+      memoryRef.current,
+      exchangeCountRef.current,
+      newFact,
+      topicStreakRef.current,
+    );
 
-    // 6. Build main lexi response — priority order:
-    //    a. Topic streak bridge (3+ same topic)
-    //    b. New fact warm acknowledgment
-    //    c. Short answer deepening appended to normal response
-    //    d. Normal adaptive response
-    let lexiText: string;
-    const isShortAnswer = text.trim().split(/\s+/).length < 8;
-    const currentStreak = topicStreakRef.current;
-
-    if (
-      currentStreak.count >= 3 &&
-      currentStreak.topic &&
-      TOPIC_BRIDGES[currentStreak.topic]
-    ) {
-      const bridge = TOPIC_BRIDGES[currentStreak.topic]?.(memoryRef.current);
-      if (bridge) {
-        lexiText = bridge;
-        // Reset streak so bridge doesn't fire every exchange
-        topicStreakRef.current = { topic: currentStreak.topic, count: 1 };
-      } else {
-        lexiText = getLexiResponse(
-          text.trim(),
-          memoryRef.current,
-          exchangeCountRef.current,
-        );
-      }
-    } else if (newFact && FACT_ACKNOWLEDGMENTS[newFact.key]) {
-      // Warm acknowledgment for the newly discovered fact
-      lexiText = FACT_ACKNOWLEDGMENTS[newFact.key](newFact.value);
-    } else {
-      lexiText = getLexiResponse(
-        text.trim(),
-        memoryRef.current,
-        exchangeCountRef.current,
-      );
-      // Append deepening prompt for short answers (skip if we already have a rich personalised response)
-      if (isShortAnswer && !milestoneText) {
-        const deepening =
-          DEEPENING_PROMPTS[
-            Math.floor(Math.random() * DEEPENING_PROMPTS.length)
-          ];
-        lexiText = `${lexiText} ${deepening}`;
-      }
-    }
-
-    newMsgs.push({ id: `l-${ts + 3}`, role: "lexi", text: lexiText });
+    newMsgs.push({ id: `l-${ts + 2}`, role: "lexi", text: reply });
 
     setMessages((p) => [...p, ...newMsgs]);
     exchangeCountRef.current += 1;
     setExchangeCount((p) => p + 1);
     setInput("");
-    speakText(lexiText);
+    speakText(reply);
     setIsSpeaking(true);
-    setTimeout(() => setIsSpeaking(false), 2200);
+    setTimeout(() => setIsSpeaking(false), 2000);
     setTimeout(
       () => bottomRef.current?.scrollIntoView({ behavior: "smooth" }),
       100,
@@ -873,7 +903,7 @@ export function ConversationModule({ lesson, onComplete }: Props) {
             Choose Your Conversation Partner
           </h3>
           <p className="text-sm text-gray-500">
-            Select a character to practice English conversation with
+            Just chat naturally — no scripts, no rules. Talk about anything!
           </p>
         </div>
         <div className="grid grid-cols-3 gap-4">
@@ -885,6 +915,7 @@ export function ConversationModule({ lesson, onComplete }: Props) {
               whileTap={{ scale: 0.97 }}
               onClick={() => startWithCharacter(opt.type)}
               className="flex flex-col items-center gap-3 rounded-2xl border-2 border-border bg-white p-4 hover:border-primary hover:shadow-md transition-all cursor-pointer"
+              data-ocid={`conversation.${opt.type}.button`}
             >
               <AnimatedCharacter type={opt.type} isSpeaking={false} />
               <span
@@ -896,9 +927,6 @@ export function ConversationModule({ lesson, onComplete }: Props) {
             </motion.button>
           ))}
         </div>
-        <p className="text-center text-xs text-muted-foreground">
-          Adaptive conversation — talk about any topic you choose!
-        </p>
       </motion.div>
     );
   }
@@ -908,14 +936,14 @@ export function ConversationModule({ lesson, onComplete }: Props) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-[35%_65%] gap-4 min-h-0">
-        {/* Left panel — character + info */}
+        {/* Left panel — character + controls */}
         <div className="flex flex-col items-center gap-3">
           <div className="rounded-2xl bg-gradient-to-b from-cyan-50 to-blue-50 border border-cyan-200 p-4 w-full flex flex-col items-center gap-2 relative">
             <AnimatedCharacter
               type={selectedCharacter}
               isSpeaking={isSpeaking}
             />
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               {isSpeaking && (
                 <span className="flex gap-0.5">
                   <span
@@ -936,8 +964,8 @@ export function ConversationModule({ lesson, onComplete }: Props) {
                 {isSpeaking
                   ? "Speaking..."
                   : isListening
-                    ? "Listening to you..."
-                    : "Waiting..."}
+                    ? "Listening..."
+                    : "Ready"}
               </span>
             </div>
             {isListening && (
@@ -952,18 +980,8 @@ export function ConversationModule({ lesson, onComplete }: Props) {
             )}
           </div>
 
-          <div className="rounded-xl bg-white border border-border p-3 w-full">
-            <p className="text-xs font-semibold text-cyan-800 mb-1">
-              Adaptive Conversation
-            </p>
-            <p className="text-xs text-gray-600 leading-relaxed">
-              Talk about any topic — school, family, sports, food, technology,
-              movies, music, health, career goals, books, festivals, friendship,
-              money, travel, or anything you like!
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
+          {/* Controls row */}
+          <div className="flex items-center justify-between w-full px-1">
             <button
               type="button"
               onClick={() => setSelectedCharacter(null)}
@@ -973,19 +991,18 @@ export function ConversationModule({ lesson, onComplete }: Props) {
             </button>
             <button
               type="button"
-              title={
-                ttsEnabled ? "Mute character voice" : "Enable character voice"
-              }
+              title={ttsEnabled ? "Mute voice" : "Enable voice"}
               onClick={() => {
                 setTtsEnabled((v) => !v);
                 if (ttsEnabled) window.speechSynthesis.cancel();
               }}
-              className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
+              className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
+              data-ocid="conversation.audio.toggle"
             >
               {ttsEnabled ? (
-                <Volume2 className="h-3.5 w-3.5" />
+                <Volume2 className="h-4 w-4" />
               ) : (
-                <VolumeX className="h-3.5 w-3.5" />
+                <VolumeX className="h-4 w-4" />
               )}
             </button>
           </div>
@@ -997,7 +1014,7 @@ export function ConversationModule({ lesson, onComplete }: Props) {
             </span>
           </div>
 
-          {/* Session Memory chip — shown when 2+ facts are remembered */}
+          {/* Session Memory chip */}
           <AnimatePresence>
             {rememberedFactsCount >= 2 && (
               <motion.div
@@ -1029,7 +1046,10 @@ export function ConversationModule({ lesson, onComplete }: Props) {
 
         {/* Right panel — chat */}
         <div className="flex flex-col border border-border rounded-2xl bg-white overflow-hidden">
-          <div className="h-80 overflow-y-auto p-4 space-y-3">
+          <div
+            className="h-80 overflow-y-auto p-4 space-y-3"
+            data-ocid="conversation.panel"
+          >
             <AnimatePresence initial={false}>
               {messages.map((msg) => {
                 if (msg.role === "tip") {
@@ -1041,20 +1061,15 @@ export function ConversationModule({ lesson, onComplete }: Props) {
                     />
                   );
                 }
-                if (msg.role === "milestone") {
-                  return <MilestoneCard key={msg.id} text={msg.text} />;
-                }
                 return (
                   <motion.div
                     key={msg.id}
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className={`flex gap-2 ${
-                      msg.role === "user" ? "flex-row-reverse" : "flex-row"
-                    }`}
+                    className={`flex gap-2 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}
                   >
                     {msg.role === "lexi" && (
-                      <div className="shrink-0 w-7 h-7 rounded-full bg-cyan-100 flex items-center justify-center text-xs">
+                      <div className="shrink-0 w-7 h-7 rounded-full bg-cyan-100 flex items-center justify-center text-xs font-semibold text-cyan-700">
                         {selectedCharacter === "boy"
                           ? "B"
                           : selectedCharacter === "girl"
@@ -1082,9 +1097,7 @@ export function ConversationModule({ lesson, onComplete }: Props) {
               data-ocid="conversation.message.input"
               type="text"
               placeholder={
-                isListening
-                  ? "Listening... speak now"
-                  : "Type or tap mic to speak..."
+                isListening ? "Listening... speak now" : "Say anything..."
               }
               value={input}
               onChange={(e) => setInput(e.target.value)}
